@@ -1,0 +1,595 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Rajdhani", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-orbitron: "Orbitron", sans-serif;
+
+  /* Core Brand Colors */
+  --color-violet-core: #7C3AED;
+  --color-violet-bright: #8B5CF6;
+  --color-violet-glow: #A78BFA;
+  --color-pink-core: #EC4899;
+  --color-pink-bright: #F472B6;
+  --color-amber-core: #F59E0B;
+  --color-amber-bright: #FCD34D;
+  --color-cyan-accent: #06B6D4;
+
+  /* Legacy compatibility */
+  --color-neon-pink: #EC4899;
+  --color-neon-blue: #06B6D4;
+  --color-neon-cyan: #06B6D4;
+  --color-neon-yellow: #F59E0B;
+  --color-purple-mid: #7C3AED;
+
+  /* Surface Colors */
+  --color-dark-bg: #050510;
+  --color-dark-surface: #0D0D1A;
+  --color-dark-card: #111128;
+  --color-dark-elevated: #161632;
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-mid: rgba(255, 255, 255, 0.10);
+}
+
+/* ========================================
+   BASE RESETS
+   ======================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #050510;
+  color: #E2E8F0;
+  font-family: "Outfit", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ========================================
+   CUSTOM SCROLLBAR
+   ======================================== */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050510;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #7C3AED, #EC4899);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #8B5CF6, #F472B6);
+}
+
+/* ========================================
+   TYPOGRAPHY UTILITIES
+   ======================================== */
+
+.font-orbitron {
+  font-family: "Orbitron", sans-serif;
+}
+
+.text-gradient-violet {
+  background: linear-gradient(135deg, #A78BFA 0%, #EC4899 50%, #F59E0B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-cyan {
+  background: linear-gradient(135deg, #06B6D4 0%, #7C3AED 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-fire {
+  background: linear-gradient(135deg, #F59E0B 0%, #EC4899 60%, #8B5CF6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ========================================
+   GLOW EFFECTS
+   ======================================== */
+
+.glow-violet {
+  text-shadow: 0 0 20px rgba(139, 92, 246, 0.7), 0 0 40px rgba(139, 92, 246, 0.3);
+}
+
+.glow-pink {
+  text-shadow: 0 0 20px rgba(236, 72, 153, 0.7), 0 0 40px rgba(236, 72, 153, 0.3);
+}
+
+.glow-blue {
+  text-shadow: 0 0 20px rgba(6, 182, 212, 0.7), 0 0 40px rgba(6, 182, 212, 0.3);
+}
+
+.glow-amber {
+  text-shadow: 0 0 20px rgba(245, 158, 11, 0.7), 0 0 40px rgba(245, 158, 11, 0.3);
+}
+
+.glow-yellow {
+  text-shadow: 0 0 20px rgba(253, 224, 71, 0.75), 0 0 40px rgba(253, 224, 71, 0.35);
+}
+
+.box-glow-violet {
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3), 0 0 20px rgba(139, 92, 246, 0.15), 0 0 60px rgba(139, 92, 246, 0.08);
+}
+
+.box-glow-pink {
+  box-shadow: 0 0 0 1px rgba(236, 72, 153, 0.3), 0 0 20px rgba(236, 72, 153, 0.15), 0 0 60px rgba(236, 72, 153, 0.08);
+}
+
+/* ========================================
+   GLASSMORPHISM
+   ======================================== */
+
+.glass {
+  background: rgba(13, 13, 26, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-light {
+  background: rgba(22, 22, 50, 0.5);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Legacy alias */
+.glass-panel {
+  background: rgba(13, 13, 26, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ========================================
+   HOLOGRAPHIC / ANIMATED BORDERS
+   ======================================== */
+
+.holo-border {
+  position: relative;
+}
+
+.holo-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7C3AED, #EC4899, #F59E0B, #06B6D4, #7C3AED);
+  background-size: 400% 400%;
+  animation: holo-shift 4s linear infinite;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.holo-border:hover::before {
+  opacity: 1;
+}
+
+@keyframes holo-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ========================================
+   SCAN LINE EFFECT
+   ======================================== */
+
+.scanlines {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ========================================
+   MARQUEE ANIMATION
+   ======================================== */
+
+@keyframes marquee-left {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-right {
+  0% {
+    transform: translateX(-50%);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-left 35s linear infinite;
+}
+
+.marquee-track-reverse {
+  display: flex;
+  width: max-content;
+  animation: marquee-right 40s linear infinite;
+}
+
+.marquee-track:hover,
+.marquee-track-reverse:hover {
+  animation-play-state: paused;
+}
+
+/* ========================================
+   PULSE RING (for LIVE badges)
+   ======================================== */
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.pulse-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-ring::before,
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.pulse-ring::after {
+  animation-delay: 0.75s;
+}
+
+/* ========================================
+   CARD 3D HOVER SYSTEM
+   ======================================== */
+
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease, box-shadow 0.3s ease;
+  will-change: transform;
+}
+
+/* ========================================
+   SHIMMER / SKELETON
+   ======================================== */
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer-bg {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.shimmer-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.04) 30%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.04) 70%,
+      transparent 100%);
+  animation: shimmer 2s infinite;
+}
+
+/* ========================================
+   BUTTON UTILITIES
+   ======================================== */
+
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #7C3AED, #EC4899);
+  color: white;
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 12px;
+  padding: 14px 28px;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.4), 0 0 60px rgba(236, 72, 153, 0.2);
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.15);
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover::after {
+  left: 130%;
+}
+
+.btn-secondary {
+  position: relative;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #A78BFA;
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 12px;
+  padding: 14px 28px;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(139, 92, 246, 0.7);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.2);
+}
+
+/* ========================================
+   NEON BORDER UTILITIES (legacy compat)
+   ======================================== */
+
+.neon-border-pink {
+  border: 1px solid rgba(236, 72, 153, 0.3);
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.05);
+}
+
+.neon-border-pink:hover {
+  border-color: rgba(236, 72, 153, 0.6);
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.15);
+}
+
+.neon-border-blue {
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.05);
+}
+
+.neon-border-blue:hover {
+  border-color: rgba(6, 182, 212, 0.6);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+}
+
+/* ========================================
+   HEX GRID BACKGROUND
+   ======================================== */
+
+.hex-grid {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(124, 58, 237, 0.12) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='60' height='104' viewBox='0 0 60 104' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 L60 17.3 L60 52 L30 69.3 L0 52 L0 17.3Z' fill='none' stroke='rgba(139%2C92%2C246%2C0.04)' stroke-width='0.5'/%3E%3Cpath d='M30 34.7 L60 52 L60 86.6 L30 104 L0 86.6 L0 52Z' fill='none' stroke='rgba(139%2C92%2C246%2C0.04)' stroke-width='0.5'/%3E%3C/svg%3E");
+  background-size: 60px 104px;
+}
+
+/* ========================================
+   FLOAT ANIMATION
+   ======================================== */
+
+@keyframes float-y {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes float-y-sm {
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-6px) rotate(2deg);
+  }
+}
+
+.float-anim {
+  animation: float-y 6s ease-in-out infinite;
+}
+
+.float-anim-sm {
+  animation: float-y-sm 4s ease-in-out infinite;
+}
+
+/* ========================================
+   LIVE BADGE PULSE
+   ======================================== */
+
+@keyframes live-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+/* ========================================
+   GLITCH EFFECT
+   ======================================== */
+
+@keyframes glitch-1 {
+
+  0%,
+  98%,
+  100% {
+    clip-path: none;
+    transform: none;
+  }
+
+  99% {
+    clip-path: polygon(0 25%, 100% 25%, 100% 30%, 0 30%);
+    transform: translate(-2px, 0);
+  }
+}
+
+@keyframes glitch-2 {
+
+  0%,
+  96%,
+  100% {
+    clip-path: none;
+    transform: none;
+  }
+
+  97% {
+    clip-path: polygon(0 65%, 100% 65%, 100% 70%, 0 70%);
+    transform: translate(2px, 0);
+  }
+}
+
+.glitch {
+  position: relative;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glitch::before {
+  color: #EC4899;
+  animation: glitch-1 8s infinite;
+  left: 2px;
+}
+
+.glitch::after {
+  color: #06B6D4;
+  animation: glitch-2 8s infinite;
+  left: -2px;
+}
+
+/* ========================================
+   SECTION LABEL UTILITY
+   ======================================== */
+
+.section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #A78BFA;
+  padding: 5px 14px;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  border-radius: 100px;
+}
+
+/* ========================================
+   ORBITRON PRICE
+   ======================================== */
+
+.price-tag {
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* ========================================
+   FONT-WEIGHT SHORTHAND UTILITIES
+   ======================================== */
+
+@layer utilities {
+  .font-600 {
+    font-weight: 600;
+  }
+  .font-700 {
+    font-weight: 700;
+  }
+}

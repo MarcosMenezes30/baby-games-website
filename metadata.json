@@ -1,0 +1,6 @@
+{
+  "name": "Baby Games",
+  "description": "Loja virtual e comunidade de leilões de Action Figures, Funkos e Colecionáveis Geek com fechamento via WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
