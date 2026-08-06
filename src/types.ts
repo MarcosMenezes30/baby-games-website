@@ -38,14 +38,6 @@ export interface Testimonial {
   avatarUrl: string;
 }
 
-export interface AdminStats {
-  totalSales: number;
-  totalOrders: number;
-  activeLeiloes: number;
-  uniqueCustomers: number;
-  viewsCount: number;
-}
-
 export interface OrderLog {
   id: string;
   customerName: string;

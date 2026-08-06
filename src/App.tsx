@@ -1,16 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  MessageCircle, Instagram, MapPin, Mail, Phone, ShieldCheck,
+  MessageCircle, MapPin, Mail, Phone, ShieldCheck,
   ArrowRight, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Types & Data
-import { Product, CartItem, Auction, OrderLog, AdminStats } from './types';
-import { TESTIMONIALS, MOCK_STATS, INITIAL_PRODUCTS, INITIAL_AUCTIONS } from './data';
+import { Product, CartItem, Auction, OrderLog } from './types';
+import { TESTIMONIALS, INITIAL_PRODUCTS, INITIAL_AUCTIONS } from './data';
 
 // Supabase API
-import { fetchProducts, fetchAuctions, fetchOrders, createOrder, updateProduct, createProduct, deleteProduct, updateOrderStatus } from './lib/api';
+import { fetchProducts, fetchAuctions, fetchOrders, createOrder, updateProduct, createProduct, deleteProduct, updateOrderStatus, createAuction, updateAuction, deleteAuction } from './lib/api';
 
 // Auth
 import { useAuth } from './context/AuthContext';
@@ -32,7 +32,6 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [orderLogs, setOrderLogs] = useState<OrderLog[]>([]);
-  const [stats] = useState<AdminStats>(MOCK_STATS);
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('bg_cart');
     return saved ? JSON.parse(saved) : [];
@@ -87,9 +86,14 @@ export default function App() {
     }
   }, [user, loadAdminData]);
 
-  // Redirect away from admin tab if user logs out
+  // Track if the user was previously authenticated to detect logout events
+  const wasAuthenticated = useRef(false);
   useEffect(() => {
-    if (!user && activeTab === 'admin') {
+    if (user) {
+      wasAuthenticated.current = true;
+    } else if (wasAuthenticated.current && activeTab === 'admin') {
+      // User just logged out while on admin tab — redirect to store
+      wasAuthenticated.current = false;
       setActiveTab('store');
     }
   }, [user, activeTab]);
@@ -228,6 +232,65 @@ export default function App() {
     }
   };
 
+  const handleSetAuctions = async (updater: Auction[] | ((prev: Auction[]) => Auction[])) => {
+    const prev = auctions;
+    const next = typeof updater === 'function' ? updater(prev) : updater;
+
+    // New auction added
+    if (next.length > prev.length) {
+      const newAuc = next[0];
+      try {
+        const saved = await createAuction({
+          title: newAuc.title,
+          description: newAuc.description,
+          imageUrl: newAuc.imageUrl,
+          currentBid: newAuc.currentBid,
+          minIncrement: newAuc.minIncrement,
+          endsAt: newAuc.endsAt,
+          status: newAuc.status,
+          bidsCount: newAuc.bidsCount,
+        });
+        setAuctions([saved, ...prev]);
+      } catch (err) {
+        console.error('Failed to create auction:', err);
+        setAuctions(prev);
+      }
+      return;
+    }
+
+    // Auction deleted
+    if (next.length < prev.length) {
+      const deletedAuc = prev.find(a => !next.some(n => n.id === a.id));
+      if (deletedAuc) {
+        setAuctions(next);
+        try {
+          await deleteAuction(deletedAuc.id);
+        } catch (err) {
+          console.error('Failed to delete auction:', err);
+          setAuctions(prev);
+        }
+      }
+      return;
+    }
+
+    // Auction updated
+    setAuctions(next);
+    const changedAuc = next.find((a, i) => JSON.stringify(a) !== JSON.stringify(prev[i]));
+    if (changedAuc) {
+      try {
+        await updateAuction(changedAuc.id, changedAuc);
+      } catch (err) {
+        console.error('Failed to update auction:', err);
+        setAuctions(prev);
+      }
+    }
+  };
+
+  // ─── Refresh handler — re-fetches all data from Supabase ───────────────────
+  const handleRefresh = async () => {
+    await Promise.all([loadPublicData(), loadAdminData()]);
+  };
+
   const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   const navTo = (tab: 'store' | 'auctions' | 'about' | 'admin') => {
@@ -345,10 +408,10 @@ export default function App() {
                   products={products}
                   setProducts={handleSetProducts}
                   auctions={auctions}
-                  setAuctions={setAuctions}
+                  setAuctions={handleSetAuctions}
                   orderLogs={orderLogs}
                   setOrderLogs={handleSetOrderLogs}
-                  stats={stats}
+                  onRefresh={handleRefresh}
                 />
               ) : (
                 <AdminLogin
@@ -403,15 +466,6 @@ export default function App() {
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(22,163,74,0.1)'; (e.currentTarget as HTMLElement).style.color = '#4ade80'; }}
                   >
                     <MessageCircle className="h-4 w-4" />
-                  </a>
-                  <a href="https://instagram.com" target="_blank" rel="noreferrer"
-                    title="Instagram"
-                    className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300"
-                    style={{ background: 'rgba(236,72,153,0.1)', border: '1px solid rgba(236,72,153,0.2)', color: '#f472b6' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#EC4899'; (e.currentTarget as HTMLElement).style.color = 'white'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(236,72,153,0.1)'; (e.currentTarget as HTMLElement).style.color = '#f472b6'; }}
-                  >
-                    <Instagram className="h-4 w-4" />
                   </a>
                 </div>
               </div>

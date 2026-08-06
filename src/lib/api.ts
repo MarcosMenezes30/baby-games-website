@@ -114,6 +114,66 @@ export async function fetchAuctions(): Promise<Auction[]> {
   }));
 }
 
+export async function createAuction(auction: Omit<Auction, 'id'>): Promise<Auction> {
+  const { data, error } = await supabase
+    .from('auctions')
+    .insert({
+      title: auction.title,
+      description: auction.description,
+      image_url: auction.imageUrl,
+      current_bid: auction.currentBid,
+      min_increment: auction.minIncrement,
+      ends_at: auction.endsAt,
+      status: auction.status,
+      bids_count: auction.bidsCount,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    title: data.title,
+    description: data.description,
+    imageUrl: data.image_url,
+    currentBid: Number(data.current_bid),
+    minIncrement: Number(data.min_increment),
+    endsAt: data.ends_at,
+    status: data.status,
+    bidsCount: data.bids_count,
+  };
+}
+
+export async function updateAuction(id: string, updates: Partial<Auction>): Promise<void> {
+  const dbUpdates: Record<string, unknown> = {};
+  if (updates.title !== undefined) dbUpdates.title = updates.title;
+  if (updates.description !== undefined) dbUpdates.description = updates.description;
+  if (updates.imageUrl !== undefined) dbUpdates.image_url = updates.imageUrl;
+  if (updates.currentBid !== undefined) dbUpdates.current_bid = updates.currentBid;
+  if (updates.minIncrement !== undefined) dbUpdates.min_increment = updates.minIncrement;
+  if (updates.endsAt !== undefined) dbUpdates.ends_at = updates.endsAt;
+  if (updates.status !== undefined) dbUpdates.status = updates.status;
+  if (updates.bidsCount !== undefined) dbUpdates.bids_count = updates.bidsCount;
+
+  const { error } = await supabase
+    .from('auctions')
+    .update(dbUpdates)
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function deleteAuction(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('auctions')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+
 // ─── ORDERS ──────────────────────────────────────────────────────────────────
 
 export async function fetchOrders(): Promise<OrderLog[]> {
