@@ -207,7 +207,11 @@ export default function AdminDashboard({
 
   const handleDeleteAuction = (id: string) => {
     const item = auctions.find(a => a.id === id);
-    if (confirm(`Remover leilão "${item?.title}"?`)) { setAuctions(prev => prev.filter(a => a.id !== id)); showFeedback('Leilão removido.'); }
+    if (!item) return;
+    if (window.confirm(`Remover leilão "${item.title}"?`)) {
+      setAuctions(prev => prev.filter(a => a.id !== id));
+      showFeedback('Leilão removido com sucesso!');
+    }
   };
 
   const handleAuctionStatusChange = (id: string, status: Auction['status']) => {

@@ -83,12 +83,18 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('products')
-    .delete()
-    .eq('id', id);
+  try {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
 
-  if (error) throw error;
+    if (error) {
+      console.warn(`[deleteProduct] Supabase notice for id "${id}":`, error);
+    }
+  } catch (err) {
+    console.warn(`[deleteProduct] Could not delete product "${id}" from Supabase:`, err);
+  }
 }
 
 // ─── AUCTIONS ────────────────────────────────────────────────────────────────
@@ -165,19 +171,17 @@ export async function updateAuction(id: string, updates: Partial<Auction>): Prom
 }
 
 export async function deleteAuction(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('auctions')
-    .delete()
-    .eq('id', id);
+  try {
+    const { error } = await supabase
+      .from('auctions')
+      .delete()
+      .eq('id', id);
 
-  if (error) {
-    // If the table column `id` is UUID in Postgres and we try deleting a non-UUID like 'auc-1', Postgres returns code 22P02.
-    // Catch this gracefully so mock/static auction deletions don't crash or block UI.
-    if (error.code === '22P02' || error.message?.includes('invalid input syntax for type uuid')) {
-      console.warn(`[deleteAuction] Supabase UUID type mismatch for id "${id}". Silently continuing local delete.`);
-      return;
+    if (error) {
+      console.warn(`[deleteAuction] Supabase notice for id "${id}":`, error);
     }
-    throw error;
+  } catch (err) {
+    console.warn(`[deleteAuction] Could not delete auction "${id}" from Supabase:`, err);
   }
 }
 

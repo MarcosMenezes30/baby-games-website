@@ -254,13 +254,12 @@ export default function App() {
 
     if (next.length < prev.length) {
       const deletedProd = prev.find(p => !next.some(n => n.id === p.id));
+      setProducts(next);
       if (deletedProd) {
-        setProducts(next);
         try {
           await deleteProduct(deletedProd.id);
         } catch (err) {
           console.error('Failed to delete product:', err);
-          setProducts(prev);
         }
       }
       return;
@@ -328,13 +327,12 @@ export default function App() {
     // Auction deleted
     if (next.length < prev.length) {
       const deletedAuc = prev.find(a => !next.some(n => n.id === a.id));
+      setAuctions(next);
       if (deletedAuc) {
-        setAuctions(next);
         try {
           await deleteAuction(deletedAuc.id);
         } catch (err) {
           console.error('Failed to delete auction:', err);
-          setAuctions(prev);
         }
       }
       return;
