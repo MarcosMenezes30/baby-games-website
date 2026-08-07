@@ -7,6 +7,7 @@ interface AboutUsProps {
   auctions: Auction[];
   showAboutOnly?: boolean;
   showAuctionsOnly?: boolean;
+  whatsappNumber?: string;
 }
 
 // Animated counter component
@@ -45,8 +46,9 @@ function AnimatedCounter({ value, suffix = '' }: { value: string; suffix?: strin
   );
 }
 
-export default function AboutUs({ auctions, showAboutOnly = false, showAuctionsOnly = false }: AboutUsProps) {
+export default function AboutUs({ auctions, showAboutOnly = false, showAuctionsOnly = false, whatsappNumber = '5515981579514' }: AboutUsProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const cleanPhone = whatsappNumber.replace(/\D/g, '') || '5515981579514';
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end start"]
@@ -279,7 +281,7 @@ export default function AboutUs({ auctions, showAboutOnly = false, showAuctionsO
               </div>
 
               <a
-                href="https://wa.me/5515981579514?text=Quero%20entrar%20no%20grupo%20de%20leiloes"
+                href={`https://wa.me/${cleanPhone}?text=Quero%20entrar%20no%20grupo%20de%20leiloes`}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-2 py-3 px-6 rounded-xl text-white font-display font-700 text-sm uppercase tracking-wider transition-all flex-shrink-0"
@@ -400,7 +402,7 @@ export default function AboutUs({ auctions, showAboutOnly = false, showAuctionsO
 
                       {!isEnded ? (
                         <a
-                          href={`https://wa.me/5515981579514?text=Olá!%20Quero%20dar%20lance%20em%20${encodeURIComponent(auc.title)}`}
+                          href={`https://wa.me/${cleanPhone}?text=Olá!%20Quero%20dar%20lance%20em%20${encodeURIComponent(auc.title)}`}
                           target="_blank" rel="noreferrer"
                           className="btn-primary flex items-center justify-center gap-2 py-3 text-xs rounded-xl"
                           style={{ fontSize: '11px', padding: '12px 16px', borderRadius: '10px' }}

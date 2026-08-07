@@ -10,6 +10,7 @@ interface CartDrawerProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
   onCheckoutComplete: (customerName: string, address: string, items: CartItem[], total: number) => void;
+  whatsappNumber?: string;
 }
 
 export default function CartDrawer({
@@ -19,6 +20,7 @@ export default function CartDrawer({
   onUpdateQuantity,
   onRemoveItem,
   onCheckoutComplete,
+  whatsappNumber = '5515981579514',
 }: CartDrawerProps) {
   // Checkout flow state: 'cart' | 'form' | 'success'
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'form' | 'success'>('cart');
@@ -64,8 +66,8 @@ export default function CartDrawer({
     messageText += `Poderia me passar um orçamento do meu pedido?`;
 
     const encodedText = encodeURIComponent(messageText);
-    const mockPhoneNumber = '5515981579514'; // Ideal placeholder number for client's business
-    const finalUrl = `https://api.whatsapp.com/send?phone=${mockPhoneNumber}&text=${encodedText}`;
+    const targetPhoneNumber = whatsappNumber.replace(/\D/g, '') || '5515981579514';
+    const finalUrl = `https://api.whatsapp.com/send?phone=${targetPhoneNumber}&text=${encodedText}`;
 
     setWhatsappText(messageText);
     setWhatsappUrl(finalUrl);

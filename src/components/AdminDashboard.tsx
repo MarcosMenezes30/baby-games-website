@@ -3,7 +3,8 @@ import {
   TrendingUp, ShoppingBag, Flame, PlusCircle, Trash2, Edit, Save,
   X, Check, DollarSign, Package, Clock, AlertTriangle,
   LayoutGrid, List, FileText, Search, Gavel, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Star, ToggleLeft, ToggleRight, Loader2
+  ArrowUpRight, ArrowDownRight, Star, ToggleLeft, ToggleRight, Loader2,
+  Phone, Tag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product, Auction, OrderLog } from '../types';
@@ -17,6 +18,14 @@ interface AdminDashboardProps {
   orderLogs: OrderLog[];
   setOrderLogs: (updater: OrderLog[] | ((prev: OrderLog[]) => OrderLog[])) => void;
   onRefresh: () => Promise<void>;
+  whatsappNumber: string;
+  onUpdateWhatsappNumber: (num: string) => void;
+  categories: string[];
+  themes: string[];
+  onAddCategory: (cat: string) => void;
+  onRemoveCategory: (cat: string) => void;
+  onAddTheme: (theme: string) => void;
+  onRemoveTheme: (theme: string) => void;
 }
 
 type AdminTab = 'overview' | 'products' | 'auctions' | 'orders';
@@ -30,6 +39,14 @@ export default function AdminDashboard({
   orderLogs,
   setOrderLogs,
   onRefresh,
+  whatsappNumber,
+  onUpdateWhatsappNumber,
+  categories,
+  themes,
+  onAddCategory,
+  onRemoveCategory,
+  onAddTheme,
+  onRemoveTheme,
 }: AdminDashboardProps) {
   const { user } = useAuth();
 
@@ -37,6 +54,15 @@ export default function AdminDashboard({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [feedback, setFeedback] = useState<{ msg: string; type: FeedbackType } | null>(null);
+
+  // WhatsApp configuration state
+  const [isEditingWhatsapp, setIsEditingWhatsapp] = useState(false);
+  const [tempWhatsapp, setTempWhatsapp] = useState(whatsappNumber);
+
+  // Categories & Themes management state
+  const [isManagingTags, setIsManagingTags] = useState(false);
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+  const [newThemeInput, setNewThemeInput] = useState('');
 
   // Products
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -46,7 +72,7 @@ export default function AdminDashboard({
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterTheme, setFilterTheme] = useState('all');
   const [newProd, setNewProd] = useState<Partial<Product>>({
-    name: '', category: 'Funko Pop', theme: 'Marvel',
+    name: '', category: categories[0] || 'Funko Pop', theme: themes[0] || 'Marvel',
     price: 150, originalPrice: undefined,
     imageUrl: '', description: '', isAvailable: true, isFeatured: false, stock: 1,
   });
@@ -254,6 +280,55 @@ export default function AdminDashboard({
               Painel <span style={{ background: 'linear-gradient(90deg,#7C3AED,#EC4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Administrativo</span>
             </h2>
             <p className="text-sm text-white/40 max-w-lg">Gerencie produtos, leilões e pedidos em tempo real — sincronizado com o Supabase.</p>
+
+            {/* WhatsApp Control */}
+            <div className="pt-2 flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{ background: 'rgba(22,163,74,0.12)', border: '1px solid rgba(22,163,74,0.3)' }}>
+                <Phone className="h-3.5 w-3.5 text-emerald-400" />
+                <span className="text-xs font-mono text-emerald-400 font-bold">WhatsApp do Site:</span>
+                {isEditingWhatsapp ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={tempWhatsapp}
+                      onChange={e => setTempWhatsapp(e.target.value)}
+                      placeholder="5515981579514"
+                      className="px-2 py-0.5 rounded text-xs text-white bg-black/40 border border-emerald-500/40 outline-none font-mono"
+                    />
+                    <button
+                      onClick={() => {
+                        onUpdateWhatsappNumber(tempWhatsapp.trim() || whatsappNumber);
+                        setIsEditingWhatsapp(false);
+                        showFeedback('Número do WhatsApp atualizado no rodapé e no carrinho!');
+                      }}
+                      className="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-[11px] font-bold text-white cursor-pointer"
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      onClick={() => setIsEditingWhatsapp(false)}
+                      className="p-0.5 text-white/40 hover:text-white cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-white/90">{whatsappNumber}</span>
+                    <button
+                      onClick={() => {
+                        setTempWhatsapp(whatsappNumber);
+                        setIsEditingWhatsapp(true);
+                      }}
+                      className="text-white/40 hover:text-emerald-400 cursor-pointer p-0.5 transition-colors"
+                      title="Alterar número do WhatsApp"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <button onClick={handleRefresh} disabled={isRefreshing}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
@@ -423,14 +498,26 @@ export default function AdminDashboard({
                       className="text-xs rounded-lg px-3 py-2 outline-none cursor-pointer"
                       style={{ ...inputStyle, color: 'rgba(255,255,255,0.7)' }}>
                       <option value="all">Todas Categorias</option>
-                      {['Funko Pop', 'Action Figure', 'Estátua', 'Acessórios', 'Outros'].map(c => <option key={c} value={c}>{c}</option>)}
+                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     <select value={filterTheme} onChange={e => setFilterTheme(e.target.value)}
                       className="text-xs rounded-lg px-3 py-2 outline-none cursor-pointer"
                       style={{ ...inputStyle, color: 'rgba(255,255,255,0.7)' }}>
                       <option value="all">Todos os Temas</option>
-                      {['Marvel', 'DC Comics', 'Naruto', 'Dragon Ball', 'Jujutsu Kaisen', 'Disney', 'Outros'].map(t => <option key={t} value={t}>{t}</option>)}
+                      {themes.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
+                    <button
+                      onClick={() => setIsManagingTags(v => !v)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                      style={{
+                        background: isManagingTags ? 'rgba(124,58,237,0.25)' : 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        color: '#a78bfa',
+                      }}
+                    >
+                      <Tag className="h-3.5 w-3.5" />
+                      {isManagingTags ? 'Fechar Tags' : 'Gerenciar Categorias & Temas'}
+                    </button>
                     <button id="admin-btn-add-product" onClick={() => setIsAddingProduct(v => !v)}
                       className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
                       style={{ background: isAddingProduct ? 'rgba(239,68,68,0.15)' : 'linear-gradient(135deg,#7C3AED,#EC4899)', color: isAddingProduct ? '#f87171' : 'white', border: isAddingProduct ? '1px solid rgba(239,68,68,0.3)' : 'none' }}>
@@ -438,6 +525,144 @@ export default function AdminDashboard({
                     </button>
                   </div>
                 </div>
+
+                {/* Categories & Themes Management Panel */}
+                <AnimatePresence>
+                  {isManagingTags && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="rounded-2xl p-5 space-y-5 overflow-hidden"
+                      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(124,58,237,0.3)' }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-violet-400 flex items-center gap-2">
+                          <Tag className="h-4 w-4" /> Gerenciamento de Categorias & Temas
+                        </h4>
+                        <button onClick={() => setIsManagingTags(false)} className="text-white/40 hover:text-white cursor-pointer">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* CATEGORIES MANAGEMENT */}
+                        <div className="space-y-3 p-4 rounded-xl" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <h5 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Categorias ({categories.length})</h5>
+                          
+                          <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+                            {categories.map(cat => (
+                              <span key={cat} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/80" style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)' }}>
+                                {cat}
+                                <button
+                                  onClick={() => {
+                                    if (categories.length <= 1) return showFeedback('É necessário manter ao menos uma categoria.', 'error');
+                                    onRemoveCategory(cat);
+                                    showFeedback(`Categoria "${cat}" removida.`);
+                                  }}
+                                  className="text-white/40 hover:text-red-400 cursor-pointer ml-1"
+                                  title="Remover categoria"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            <input
+                              type="text"
+                              placeholder="Nova categoria (ex: Camisetas)"
+                              value={newCategoryInput}
+                              onChange={e => setNewCategoryInput(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (newCategoryInput.trim()) {
+                                    onAddCategory(newCategoryInput.trim());
+                                    showFeedback(`Categoria "${newCategoryInput.trim()}" adicionada!`);
+                                    setNewCategoryInput('');
+                                  }
+                                }
+                              }}
+                              className="flex-1 px-3 py-2 rounded-lg text-xs text-white outline-none"
+                              style={inputStyle}
+                            />
+                            <button
+                              onClick={() => {
+                                if (newCategoryInput.trim()) {
+                                  onAddCategory(newCategoryInput.trim());
+                                  showFeedback(`Categoria "${newCategoryInput.trim()}" adicionada!`);
+                                  setNewCategoryInput('');
+                                }
+                              }}
+                              className="px-3 py-2 rounded-lg text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 cursor-pointer flex items-center gap-1"
+                            >
+                              <PlusCircle className="h-3.5 w-3.5" /> Adicionar
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* THEMES MANAGEMENT */}
+                        <div className="space-y-3 p-4 rounded-xl" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <h5 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Temas ({themes.length})</h5>
+                          
+                          <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+                            {themes.map(th => (
+                              <span key={th} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-pink-300" style={{ background: 'rgba(236,72,153,0.15)', border: '1px solid rgba(236,72,153,0.3)' }}>
+                                {th}
+                                <button
+                                  onClick={() => {
+                                    if (themes.length <= 1) return showFeedback('É necessário manter ao menos um tema.', 'error');
+                                    onRemoveTheme(th);
+                                    showFeedback(`Tema "${th}" removido.`);
+                                  }}
+                                  className="text-white/40 hover:text-red-400 cursor-pointer ml-1"
+                                  title="Remover tema"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            <input
+                              type="text"
+                              placeholder="Novo tema (ex: Pokémon)"
+                              value={newThemeInput}
+                              onChange={e => setNewThemeInput(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (newThemeInput.trim()) {
+                                    onAddTheme(newThemeInput.trim());
+                                    showFeedback(`Tema "${newThemeInput.trim()}" adicionado!`);
+                                    setNewThemeInput('');
+                                  }
+                                }
+                              }}
+                              className="flex-1 px-3 py-2 rounded-lg text-xs text-white outline-none"
+                              style={inputStyle}
+                            />
+                            <button
+                              onClick={() => {
+                                if (newThemeInput.trim()) {
+                                  onAddTheme(newThemeInput.trim());
+                                  showFeedback(`Tema "${newThemeInput.trim()}" adicionado!`);
+                                  setNewThemeInput('');
+                                }
+                              }}
+                              className="px-3 py-2 rounded-lg text-xs font-bold text-white bg-pink-600 hover:bg-pink-500 cursor-pointer flex items-center gap-1"
+                            >
+                              <PlusCircle className="h-3.5 w-3.5" /> Adicionar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <AnimatePresence>
                   {isAddingProduct && (
@@ -453,8 +678,8 @@ export default function AdminDashboard({
                             placeholder="Ex: Funko Pop Luffy Gear 5" className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none" style={inputStyle} />
                         </div>
                         {[
-                          { label: 'Categoria', field: 'category', options: ['Funko Pop', 'Action Figure', 'Estátua', 'Acessórios', 'Outros'] },
-                          { label: 'Tema', field: 'theme', options: ['Marvel', 'Naruto', 'Jujutsu Kaisen', 'Dragon Ball', 'Disney', 'DC Comics', 'Outros'] },
+                          { label: 'Categoria', field: 'category', options: categories },
+                          { label: 'Tema', field: 'theme', options: themes },
                         ].map(({ label, field, options }) => (
                           <div key={field}>
                             <label className="text-[10px] text-white/40 uppercase font-mono">{label} *</label>

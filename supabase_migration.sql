@@ -104,6 +104,9 @@ CREATE TABLE IF NOT EXISTS auctions (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Garantir que a coluna id aceita texto/IDs personalizados
+ALTER TABLE auctions ALTER COLUMN id TYPE TEXT;
+
 ALTER TABLE auctions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "auctions_select_public" ON auctions;

@@ -37,15 +37,64 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [whatsappNumber, setWhatsappNumber] = useState<string>(() => {
+    return localStorage.getItem('bg_whatsapp_number') || '5515981579514';
+  });
+
+  const DEFAULT_CATEGORIES = ['Funko Pop', 'Action Figure', 'Estátua', 'Acessórios', 'Outros'];
+  const DEFAULT_THEMES = ['Marvel', 'DC Comics', 'Naruto', 'Dragon Ball', 'Jujutsu Kaisen', 'Disney', 'Outros'];
+
+  const [categories, setCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem('bg_categories');
+    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+  });
+
+  const [themes, setThemes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('bg_themes');
+    return saved ? JSON.parse(saved) : DEFAULT_THEMES;
+  });
+
   const [loading, setLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState<'store' | 'auctions' | 'about' | 'admin'>('store');
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Persist cart in localStorage
+  // Persist cart, whatsapp number, categories and themes in localStorage
   useEffect(() => {
     localStorage.setItem('bg_cart', JSON.stringify(cartItems));
   }, [cartItems]);
+
+  useEffect(() => {
+    localStorage.setItem('bg_whatsapp_number', whatsappNumber);
+  }, [whatsappNumber]);
+
+  useEffect(() => {
+    localStorage.setItem('bg_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  useEffect(() => {
+    localStorage.setItem('bg_themes', JSON.stringify(themes));
+  }, [themes]);
+
+  const handleAddCategory = (cat: string) => {
+    if (!categories.includes(cat)) {
+      setCategories(prev => [...prev, cat]);
+    }
+  };
+
+  const handleRemoveCategory = (cat: string) => {
+    setCategories(prev => prev.filter(c => c !== cat));
+  };
+
+  const handleAddTheme = (th: string) => {
+    if (!themes.includes(th)) {
+      setThemes(prev => [...prev, th]);
+    }
+  };
+
+  const handleRemoveTheme = (th: string) => {
+    setThemes(prev => prev.filter(t => t !== th));
+  };
 
   // ─── Public data load (products + auctions) — no auth required ─────────────
   const loadPublicData = useCallback(async () => {
@@ -64,6 +113,24 @@ export default function App() {
       setLoading(false);
     }
   }, []);
+
+  // ─── Silent refresh on navigation (imperceptible to user) ──────────────────
+  const loadPublicDataSilent = useCallback(async () => {
+    try {
+      const [prods, aucs] = await Promise.all([
+        fetchProducts(),
+        fetchAuctions(),
+      ]);
+      if (prods && prods.length > 0) setProducts(prods);
+      if (aucs && aucs.length > 0) setAuctions(aucs);
+    } catch (err) {
+      console.error('Silent refresh error:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPublicDataSilent();
+  }, [activeTab, loadPublicDataSilent]);
 
   // ─── Admin data load (orders) — only when authenticated ────────────────────
   const loadAdminData = useCallback(async () => {
@@ -374,28 +441,28 @@ export default function App() {
                   }}
                 />
 
-                <AboutUs auctions={auctions} showAboutOnly={true} />
+                <AboutUs auctions={auctions} showAboutOnly={true} whatsappNumber={whatsappNumber} />
 
                 <div id="auctions-section-main">
-                  <AboutUs auctions={auctions} showAuctionsOnly={true} />
+                  <AboutUs auctions={auctions} showAuctionsOnly={true} whatsappNumber={whatsappNumber} />
                 </div>
 
                 <Testimonials testimonials={TESTIMONIALS} />
 
-                <Catalog products={products} onAddToCart={handleAddToCart} />
+                <Catalog products={products} onAddToCart={handleAddToCart} availableCategories={categories} availableThemes={themes} />
               </>
             )}
 
             {activeTab === 'auctions' && (
               <>
-                <AboutUs auctions={auctions} showAuctionsOnly={true} />
+                <AboutUs auctions={auctions} showAuctionsOnly={true} whatsappNumber={whatsappNumber} />
                 <Testimonials testimonials={TESTIMONIALS} />
               </>
             )}
 
             {activeTab === 'about' && (
               <>
-                <AboutUs auctions={auctions} showAboutOnly={true} />
+                <AboutUs auctions={auctions} showAboutOnly={true} whatsappNumber={whatsappNumber} />
                 <Testimonials testimonials={TESTIMONIALS} />
               </>
             )}
@@ -412,6 +479,14 @@ export default function App() {
                   orderLogs={orderLogs}
                   setOrderLogs={handleSetOrderLogs}
                   onRefresh={handleRefresh}
+                  whatsappNumber={whatsappNumber}
+                  onUpdateWhatsappNumber={setWhatsappNumber}
+                  categories={categories}
+                  themes={themes}
+                  onAddCategory={handleAddCategory}
+                  onRemoveCategory={handleRemoveCategory}
+                  onAddTheme={handleAddTheme}
+                  onRemoveTheme={handleRemoveTheme}
                 />
               ) : (
                 <AdminLogin
@@ -431,6 +506,7 @@ export default function App() {
         onUpdateQuantity={handleUpdateCartQuantity}
         onRemoveItem={handleRemoveCartItem}
         onCheckoutComplete={handleCheckoutComplete}
+        whatsappNumber={whatsappNumber}
       />
 
       {/* Premium Footer — only shown on public tabs */}
@@ -458,7 +534,7 @@ export default function App() {
                 </p>
 
                 <div className="flex items-center gap-2.5">
-                  <a href="https://wa.me/5515981579514" target="_blank" rel="noreferrer"
+                  <a href={`https://wa.me/${whatsappNumber.replace(/\D/g, '') || '5515981579514'}`} target="_blank" rel="noreferrer"
                     title="WhatsApp"
                     className="flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300"
                     style={{ background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.2)', color: '#4ade80' }}

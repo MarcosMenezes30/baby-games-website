@@ -170,8 +170,17 @@ export async function deleteAuction(id: string): Promise<void> {
     .delete()
     .eq('id', id);
 
-  if (error) throw error;
+  if (error) {
+    // If the table column `id` is UUID in Postgres and we try deleting a non-UUID like 'auc-1', Postgres returns code 22P02.
+    // Catch this gracefully so mock/static auction deletions don't crash or block UI.
+    if (error.code === '22P02' || error.message?.includes('invalid input syntax for type uuid')) {
+      console.warn(`[deleteAuction] Supabase UUID type mismatch for id "${id}". Silently continuing local delete.`);
+      return;
+    }
+    throw error;
+  }
 }
+
 
 
 // ─── ORDERS ──────────────────────────────────────────────────────────────────

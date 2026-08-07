@@ -7,6 +7,8 @@ import { Product } from '../types';
 interface CatalogProps {
   products: Product[];
   onAddToCart: (product: Product) => void;
+  availableCategories?: string[];
+  availableThemes?: string[];
 }
 
 // 3D tilt hook for each card
@@ -230,7 +232,7 @@ function ProductCard({ product, onAddToCart }: ProductCardProps) {
   );
 }
 
-export default function Catalog({ products, onAddToCart }: CatalogProps) {
+export default function Catalog({ products, onAddToCart, availableCategories = [], availableThemes = [] }: CatalogProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTheme, setSelectedTheme] = useState<string>('all');
@@ -238,14 +240,14 @@ export default function Catalog({ products, onAddToCart }: CatalogProps) {
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'name'>('featured');
 
   const categories = useMemo(() => {
-    const list = new Set(products.map(p => p.category));
+    const list = new Set([...availableCategories, ...products.map(p => p.category)]);
     return ['all', ...Array.from(list)];
-  }, [products]);
+  }, [products, availableCategories]);
 
   const themes = useMemo(() => {
-    const list = new Set(products.map(p => p.theme));
+    const list = new Set([...availableThemes, ...products.map(p => p.theme)]);
     return ['all', ...Array.from(list)];
-  }, [products]);
+  }, [products, availableThemes]);
 
   const filteredProducts = useMemo(() => {
     let result = [...products];
