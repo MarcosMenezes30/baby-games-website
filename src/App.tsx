@@ -4,6 +4,7 @@ import {
   ArrowRight, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // Types & Data
 import { Product, CartItem, Auction, OrderLog } from './types';
@@ -56,7 +57,27 @@ export default function App() {
 
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<'store' | 'auctions' | 'about' | 'admin'>('store');
+  // ─── Routing ────────────────────────────────────────────────────────────────
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  type Tab = 'store' | 'catalog' | 'auctions' | 'about' | 'admin';
+  const pathToTab: Record<string, Tab> = {
+    '/': 'store',
+    '/catalogo': 'catalog',
+    '/leiloes': 'auctions',
+    '/sobre': 'about',
+    '/admin': 'admin',
+  };
+  const tabToPath: Record<Tab, string> = {
+    store: '/',
+    catalog: '/catalogo',
+    auctions: '/leiloes',
+    about: '/sobre',
+    admin: '/admin',
+  };
+  const activeTab: Tab = pathToTab[location.pathname] ?? 'store';
+
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Persist cart, whatsapp number, categories and themes in localStorage
@@ -161,9 +182,9 @@ export default function App() {
     } else if (wasAuthenticated.current && activeTab === 'admin') {
       // User just logged out while on admin tab — redirect to store
       wasAuthenticated.current = false;
-      setActiveTab('store');
+      navigate('/');
     }
-  }, [user, activeTab]);
+  }, [user, activeTab, navigate]);
 
   // ─── Cart handlers ─────────────────────────────────────────────────────────
 
@@ -358,8 +379,8 @@ export default function App() {
 
   const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
-  const navTo = (tab: 'store' | 'auctions' | 'about' | 'admin') => {
-    setActiveTab(tab);
+  const navTo = (tab: Tab) => {
+    navigate(tabToPath[tab]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -418,7 +439,7 @@ export default function App() {
       <main className="flex-1 relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeTab}
+            key={location.pathname}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
@@ -465,6 +486,18 @@ export default function App() {
               </>
             )}
 
+            {/* ── CATALOG-ONLY VIEW ── */}
+
+            {activeTab === 'catalog' && (
+              <Catalog
+                products={products}
+                onAddToCart={handleAddToCart}
+                availableCategories={categories}
+                availableThemes={themes}
+                showAll
+              />
+            )}
+
             {/* ── ADMIN VIEW ── */}
 
             {activeTab === 'admin' && (
@@ -488,8 +521,8 @@ export default function App() {
                 />
               ) : (
                 <AdminLogin
-                  onSuccess={() => setActiveTab('admin')}
-                  onBack={() => setActiveTab('store')}
+                  onSuccess={() => navigate('/admin')}
+                  onBack={() => navigate('/')}
                 />
               )
             )}
@@ -549,7 +582,8 @@ export default function App() {
                 <h4 className="text-[10px] font-mono font-600 text-white/30 uppercase tracking-[0.2em]">Navegação</h4>
                 <div className="space-y-2 text-sm font-display font-600">
                   {[
-                    { label: 'Catálogo de Vendas', tab: 'store' as const },
+                    { label: 'Início', tab: 'store' as const },
+                    { label: 'Catálogo', tab: 'catalog' as const },
                     { label: 'Leilões WhatsApp', tab: 'auctions' as const },
                     { label: 'Sobre Nós', tab: 'about' as const },
                   ].map(link => (

@@ -69,6 +69,7 @@ export default function AdminDashboard({
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editProd, setEditProd] = useState<Partial<Product>>({});
   const [productView, setProductView] = useState<'list' | 'gallery'>('list');
+  const [galleryEditOpen, setGalleryEditOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterTheme, setFilterTheme] = useState('all');
   const [newProd, setNewProd] = useState<Partial<Product>>({
@@ -169,6 +170,7 @@ export default function AdminDashboard({
       ? { ...p, ...editProd, price: Number(editProd.price), originalPrice: editProd.originalPrice ? Number(editProd.originalPrice) : undefined, stock: Number(editProd.stock ?? 0) } as Product
       : p));
     setEditingProductId(null);
+    setGalleryEditOpen(false);
     showFeedback('Produto atualizado!');
   };
 
@@ -765,7 +767,28 @@ export default function AdminDashboard({
                                       ? <input type="text" value={editProd.name || ''} onChange={e => setEditProd({ ...editProd, name: e.target.value })}
                                           className="text-sm text-white bg-transparent border-b outline-none w-full" style={{ borderColor: 'rgba(124,58,237,0.5)' }} />
                                       : <span className="text-sm font-bold text-white">{p.name}</span>}
-                                    <div className="text-[10px] text-white/35 font-mono">{p.category} · <span className="text-violet-400">{p.theme}</span></div>
+                                    {isEditing ? (
+                                      <div className="flex gap-2 mt-1">
+                                        <select
+                                          value={editProd.category || ''}
+                                          onChange={e => setEditProd({ ...editProd, category: e.target.value })}
+                                          className="text-[10px] font-mono text-white rounded px-1.5 py-0.5 outline-none cursor-pointer flex-1"
+                                          style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.35)' }}
+                                        >
+                                          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                        <select
+                                          value={editProd.theme || ''}
+                                          onChange={e => setEditProd({ ...editProd, theme: e.target.value })}
+                                          className="text-[10px] font-mono text-violet-300 rounded px-1.5 py-0.5 outline-none cursor-pointer flex-1"
+                                          style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)' }}
+                                        >
+                                          {themes.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                      </div>
+                                    ) : (
+                                      <div className="text-[10px] text-white/35 font-mono">{p.category} · <span className="text-violet-400">{p.theme}</span></div>
+                                    )}
                                   </div>
                                 </div>
                               </td>
@@ -828,37 +851,137 @@ export default function AdminDashboard({
 
                 {/* Gallery */}
                 {productView === 'gallery' && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {filteredProducts.map(p => (
-                      <motion.div key={p.id} whileHover={{ scale: 1.02 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                        className="rounded-xl overflow-hidden group relative" style={cardStyle}>
-                        <div className="aspect-square relative overflow-hidden bg-black/40">
-                          <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300" />
-                          {!p.isAvailable && (
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                              <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-md"
-                                style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>Pausado</span>
+                  <div className="relative">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {filteredProducts.map(p => (
+                        <motion.div key={p.id} whileHover={{ scale: 1.02 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                          className="rounded-xl overflow-hidden group relative" style={cardStyle}>
+                          <div className="aspect-square relative overflow-hidden bg-black/40">
+                            <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300" />
+                            {!p.isAvailable && (
+                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-md"
+                                  style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>Pausado</span>
+                              </div>
+                            )}
+                            {p.isFeatured && <div className="absolute top-2 right-2"><Star className="h-4 w-4 fill-amber-400 text-amber-400" /></div>}
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end gap-1.5 p-2">
+                              <button
+                                onClick={() => { setEditingProductId(p.id); setEditProd({ ...p }); setGalleryEditOpen(true); }}
+                                className="p-1.5 rounded-lg cursor-pointer backdrop-blur-sm"
+                                style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.15)' }}><Edit className="h-3.5 w-3.5" /></button>
+                              <button onClick={() => handleDeleteProduct(p.id)}
+                                className="p-1.5 rounded-lg cursor-pointer backdrop-blur-sm"
+                                style={{ background: 'rgba(239,68,68,0.6)', color: 'white' }}><Trash2 className="h-3.5 w-3.5" /></button>
                             </div>
-                          )}
-                          {p.isFeatured && <div className="absolute top-2 right-2"><Star className="h-4 w-4 fill-amber-400 text-amber-400" /></div>}
-                          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end gap-1.5 p-2">
-                            <button onClick={() => { setEditingProductId(p.id); setEditProd({ ...p }); setProductView('list'); }}
-                              className="p-1.5 rounded-lg cursor-pointer backdrop-blur-sm"
-                              style={{ background: 'rgba(0,0,0,0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.15)' }}><Edit className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => handleDeleteProduct(p.id)}
-                              className="p-1.5 rounded-lg cursor-pointer backdrop-blur-sm"
-                              style={{ background: 'rgba(239,68,68,0.6)', color: 'white' }}><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
-                        </div>
-                        <div className="p-3 space-y-1">
-                          <span className="text-xs font-bold text-white line-clamp-1">{p.name}</span>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-mono font-black text-violet-400">R$ {p.price.toFixed(2)}</span>
-                            <span className={`text-[10px] font-mono ${p.stock <= 2 ? 'text-amber-400' : 'text-white/35'}`}>{p.stock}un</span>
+                          <div className="p-3 space-y-1">
+                            <span className="text-xs font-bold text-white line-clamp-1">{p.name}</span>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-mono font-black text-violet-400">R$ {p.price.toFixed(2)}</span>
+                              <span className={`text-[10px] font-mono ${p.stock <= 2 ? 'text-amber-400' : 'text-white/35'}`}>{p.stock}un</span>
+                            </div>
                           </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {/* Gallery edit modal */}
+                    <AnimatePresence>
+                      {galleryEditOpen && editingProductId && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                          style={{ background: 'rgba(5,5,16,0.85)', backdropFilter: 'blur(6px)' }}
+                          onClick={e => { if (e.target === e.currentTarget) { setGalleryEditOpen(false); setEditingProductId(null); } }}
+                        >
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                            className="w-full max-w-lg rounded-2xl p-6 space-y-5 overflow-y-auto max-h-[90vh]"
+                            style={{ background: 'rgba(17,17,40,0.98)', border: '1px solid rgba(124,58,237,0.35)', boxShadow: '0 0 40px rgba(124,58,237,0.2)' }}
+                          >
+                            {/* Modal header */}
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-display font-700 text-white uppercase tracking-wide">Editar Produto</h4>
+                              <button onClick={() => { setGalleryEditOpen(false); setEditingProductId(null); }}
+                                className="p-1.5 rounded-lg cursor-pointer transition-colors"
+                                style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)' }}>
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            {/* Fields */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="sm:col-span-2">
+                                <label className="text-[10px] text-white/40 uppercase font-mono">Nome *</label>
+                                <input type="text" value={editProd.name || ''} onChange={e => setEditProd({ ...editProd, name: e.target.value })}
+                                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none" style={inputStyle} />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-white/40 uppercase font-mono">Categoria</label>
+                                <select value={editProd.category || ''} onChange={e => setEditProd({ ...editProd, category: e.target.value })}
+                                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none cursor-pointer" style={inputStyle}>
+                                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-white/40 uppercase font-mono">Tema</label>
+                                <select value={editProd.theme || ''} onChange={e => setEditProd({ ...editProd, theme: e.target.value })}
+                                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none cursor-pointer" style={inputStyle}>
+                                  {themes.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-white/40 uppercase font-mono">Preço (R$) *</label>
+                                <input type="number" step="0.01" value={editProd.price || 0} onChange={e => setEditProd({ ...editProd, price: Number(e.target.value) })}
+                                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none" style={inputStyle} />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-white/40 uppercase font-mono">Preço Original</label>
+                                <input type="number" step="0.01" value={editProd.originalPrice || ''} onChange={e => setEditProd({ ...editProd, originalPrice: e.target.value ? Number(e.target.value) : undefined })}
+                                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none" style={inputStyle} />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-white/40 uppercase font-mono">Estoque</label>
+                                <input type="number" min="0" value={editProd.stock ?? 0} onChange={e => setEditProd({ ...editProd, stock: Number(e.target.value) })}
+                                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none" style={inputStyle} />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="text-[10px] text-white/40 uppercase font-mono">URL da Imagem</label>
+                                <input type="url" value={editProd.imageUrl || ''} onChange={e => setEditProd({ ...editProd, imageUrl: e.target.value })}
+                                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none" style={inputStyle} />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="text-[10px] text-white/40 uppercase font-mono">Descrição</label>
+                                <textarea value={editProd.description || ''} onChange={e => setEditProd({ ...editProd, description: e.target.value })}
+                                  rows={2} className="w-full mt-1 px-3 py-2 rounded-lg text-sm text-white outline-none resize-none" style={inputStyle} />
+                              </div>
+                            </div>
+
+                            {/* Toggles + save */}
+                            <div className="flex flex-wrap items-center gap-5 pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                              {([['isAvailable', 'Disponível'], ['isFeatured', 'Destaque']] as const).map(([field, label]) => (
+                                <label key={field} className="flex items-center gap-2 cursor-pointer text-xs text-white/60 hover:text-white transition-colors">
+                                  <input type="checkbox" checked={!!editProd[field]} onChange={e => setEditProd({ ...editProd, [field]: e.target.checked })} className="rounded" />
+                                  {label}
+                                </label>
+                              ))}
+                              <button onClick={saveProductChanges}
+                                className="ml-auto flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white cursor-pointer transition-all hover:opacity-90"
+                                style={{ background: 'linear-gradient(135deg,#7C3AED,#EC4899)' }}>
+                                <Save className="h-3.5 w-3.5" />
+                                Salvar
+                              </button>
+                            </div>
+                          </motion.div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
               </div>

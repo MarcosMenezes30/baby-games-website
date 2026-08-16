@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, MouseEvent } from 'react';
-import { Search, Check, AlertCircle, ShoppingCart, Info, Sparkles, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect, MouseEvent } from 'react';
+import { Search, Check, AlertCircle, ShoppingCart, Info, Sparkles, RefreshCw, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { Product } from '../types';
 
@@ -9,6 +9,8 @@ interface CatalogProps {
   onAddToCart: (product: Product) => void;
   availableCategories?: string[];
   availableThemes?: string[];
+  /** Quando true, exibe todos os produtos sem paginação (página dedicada de catálogo) */
+  showAll?: boolean;
 }
 
 // 3D tilt hook for each card
@@ -232,12 +234,15 @@ function ProductCard({ product, onAddToCart }: ProductCardProps) {
   );
 }
 
-export default function Catalog({ products, onAddToCart, availableCategories = [], availableThemes = [] }: CatalogProps) {
+const ITEMS_PER_PAGE = 8;
+
+export default function Catalog({ products, onAddToCart, availableCategories = [], availableThemes = [], showAll = false }: CatalogProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTheme, setSelectedTheme] = useState<string>('all');
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'name'>('featured');
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
   const categories = useMemo(() => {
     const list = new Set([...availableCategories, ...products.map(p => p.category)]);
@@ -273,6 +278,11 @@ export default function Catalog({ products, onAddToCart, availableCategories = [
     return result;
   }, [products, searchTerm, selectedCategory, selectedTheme, onlyAvailable, sortBy]);
 
+  // Reset visible count whenever the filtered result set changes (filter applied or products updated)
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [searchTerm, selectedCategory, selectedTheme, onlyAvailable, sortBy]);
+
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedCategory('all');
@@ -282,6 +292,9 @@ export default function Catalog({ products, onAddToCart, availableCategories = [
   };
 
   const hasActiveFilters = searchTerm || selectedCategory !== 'all' || selectedTheme !== 'all' || onlyAvailable;
+
+  const visibleProducts = showAll ? filteredProducts : filteredProducts.slice(0, visibleCount);
+  const hasMore = !showAll && visibleCount < filteredProducts.length;
 
   const selectClass = "w-full px-4 py-3 rounded-xl font-sans text-sm text-white/80 focus:outline-none transition-all appearance-none cursor-pointer";
   const selectStyle = {
@@ -318,10 +331,7 @@ export default function Catalog({ products, onAddToCart, availableCategories = [
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-[10px] font-mono text-white/25 glass px-4 py-2.5 rounded-xl flex-shrink-0">
-            <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
-            PROTÓTIPO · ATUALIZAÇÕES LOCAIS
-          </div>
+
         </motion.div>
 
         {/* Filter bar */}
@@ -416,13 +426,54 @@ export default function Catalog({ products, onAddToCart, availableCategories = [
             </button>
           </div>
         ) : (
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6">
-            <AnimatePresence>
-              {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <>
+            <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6">
+              <AnimatePresence>
+                {visibleProducts.map(product => (
+                  <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Load More button */}
+            {hasMore && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col items-center gap-3 pt-4"
+              >
+                <span className="text-[11px] font-mono text-white/25">
+                  Exibindo {visibleCount} de {filteredProducts.length} produtos
+                </span>
+                <button
+                  id="catalog-load-more"
+                  onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}
+                  className="flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-display text-sm font-700 uppercase tracking-wider transition-all duration-300 cursor-pointer"
+                  style={{
+                    background: 'rgba(124,58,237,0.12)',
+                    border: '1px solid rgba(124,58,237,0.35)',
+                    color: '#A78BFA',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #7C3AED, #EC4899)';
+                    (e.currentTarget as HTMLElement).style.color = 'white';
+                    (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
+                    (e.currentTarget as HTMLElement).style.boxShadow = '0 0 24px rgba(124,58,237,0.35)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(124,58,237,0.12)';
+                    (e.currentTarget as HTMLElement).style.color = '#A78BFA';
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(124,58,237,0.35)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                  }}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  Carregar mais produtos
+                </button>
+              </motion.div>
+            )}
+          </>
         )}
 
         {/* Bottom info card */}

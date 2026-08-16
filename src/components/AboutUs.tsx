@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { MessageCircle, ShieldCheck, Flame, Trophy, Award, Users, TrendingUp, Calendar, ArrowRight, Zap } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { MessageCircle, ShieldCheck, Flame, Trophy, Award, Users, TrendingUp, Calendar, ArrowRight, Zap, UserPlus, Eye, Gavel, CheckCircle2, ChevronRight } from 'lucide-react';
 import { motion, useInView, useScroll, useTransform } from 'motion/react';
 import { Auction } from '../types';
 
@@ -295,22 +295,126 @@ export default function AboutUs({ auctions, showAboutOnly = false, showAuctionsO
               </a>
             </div>
 
-            {/* How it works */}
-            <div className="glass rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-              {[
-                { n: '01', label: 'Entre no Grupo', desc: 'Clique e participe do grupo exclusivo de curadoria e lances.', color: '#A78BFA' },
-                { n: '02', label: 'Acompanhe os Itens', desc: 'Moderadores anunciam peças raras com fotos, preço e regras.', color: '#EC4899' },
-                { n: '03', label: 'Dê seu Lance', desc: 'Responda no chat com seu valor. Maior lance ao final arremata!', color: '#F59E0B' },
-              ].map(step => (
-                <div key={step.n} className="flex items-start gap-4">
-                  <div className="price-tag text-3xl font-black flex-shrink-0 leading-none" style={{ color: step.color, opacity: 0.3 }}>{step.n}</div>
-                  <div>
-                    <div className="font-display font-700 text-white text-sm uppercase tracking-wide mb-1" style={{ color: step.color }}>{step.label}</div>
-                    <p className="text-white/40 text-xs leading-relaxed font-sans">{step.desc}</p>
+            {/* How it works — redesigned */}
+            {(() => {
+              const steps = [
+                {
+                  n: '01',
+                  icon: UserPlus,
+                  label: 'Entre no Grupo',
+                  desc: 'Clique no botão e entre no grupo exclusivo de curadoria. Lá você encontra uma comunidade de colecionadores apaixonados.',
+                  tip: 'Acesso 100% gratuito',
+                  tipIcon: CheckCircle2,
+                  color: '#A78BFA',
+                  glow: 'rgba(167,139,250,0.18)',
+                  border: 'rgba(167,139,250,0.3)',
+                  bg: 'rgba(124,58,237,0.08)',
+                },
+                {
+                  n: '02',
+                  icon: Eye,
+                  label: 'Acompanhe os Anúncios',
+                  desc: 'Moderadores postam peças raras com fotos em alta qualidade, preço de partida e regras do leilão, tudo transparente!',
+                  tip: 'Novidades todos os dias das 11 às 17!',
+                  tipIcon: Flame,
+                  color: '#EC4899',
+                  glow: 'rgba(236,72,153,0.18)',
+                  border: 'rgba(236,72,153,0.3)',
+                  bg: 'rgba(236,72,153,0.08)',
+                },
+                {
+                  n: '03',
+                  icon: Gavel,
+                  label: 'Dê seu Lance',
+                  desc: 'Responda no chat com seu valor. O maior lance registrado até o encerramento arremata a peça, simples assim!',
+                  tip: 'Envio garantido para todo o Brasil',
+                  tipIcon: Zap,
+                  color: '#F59E0B',
+                  glow: 'rgba(245,158,11,0.18)',
+                  border: 'rgba(245,158,11,0.3)',
+                  bg: 'rgba(245,158,11,0.08)',
+                },
+              ];
+
+              return (
+                <div className="space-y-6">
+                  {/* Section label */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5 }}
+                    className="text-center space-y-2"
+                  >
+                    <p className="text-[11px] font-mono uppercase tracking-[0.25em] text-white/30">Passo a passo</p>
+                    <h3 className="text-2xl sm:text-3xl font-display font-700 text-white">Como participar de um leilão?</h3>
+                  </motion.div>
+
+                  {/* Cards + connector */}
+                  <div className="relative grid grid-cols-1 md:grid-cols-3 gap-5">
+
+
+                    {steps.map((step, i) => {
+                      const Icon = step.icon;
+                      const TipIcon = step.tipIcon;
+                      return (
+                        <motion.div
+                          key={step.n}
+                          initial={{ opacity: 0, y: 32 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, margin: '-30px' }}
+                          transition={{ duration: 0.55, delay: i * 0.15, type: 'spring', stiffness: 80 }}
+                          whileHover={{ y: -6, scale: 1.02 }}
+                          className="relative flex flex-col gap-5 rounded-2xl p-6 cursor-default z-10 transition-shadow duration-300"
+                          style={{
+                            background: step.bg,
+                            border: `1px solid ${step.border}`,
+                            boxShadow: `0 4px 30px ${step.glow}`,
+                          }}
+                        >
+                          {/* Number badge */}
+                          <div className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-orbitron font-bold"
+                            style={{ background: step.color, color: '#050510', boxShadow: `0 0 16px ${step.glow}` }}
+                          >
+                            {step.n}
+                          </div>
+
+                          {/* Icon circle */}
+                          <div className="flex h-16 w-16 items-center justify-center rounded-2xl flex-shrink-0"
+                            style={{ background: `rgba(255,255,255,0.04)`, border: `1px solid ${step.border}` }}
+                          >
+                            <Icon className="h-8 w-8" style={{ color: step.color }} strokeWidth={1.5} />
+                          </div>
+
+                          {/* Text */}
+                          <div className="space-y-2">
+                            <h4 className="font-display font-700 text-white text-base uppercase tracking-wide"
+                              style={{ color: step.color }}
+                            >
+                              {step.label}
+                            </h4>
+                            <p className="text-white/55 text-sm leading-relaxed font-sans">{step.desc}</p>
+                          </div>
+
+                          {/* Tip pill */}
+                          <div className="flex items-center gap-2 mt-auto pt-3"
+                            style={{ borderTop: `1px solid ${step.border}` }}
+                          >
+                            <TipIcon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: step.color }} />
+                            <span className="text-[11px] font-mono" style={{ color: step.color }}>{step.tip}</span>
+                          </div>
+
+                          {/* Bottom glow */}
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-px"
+                            style={{ background: `linear-gradient(90deg, transparent, ${step.color}, transparent)` }}
+                          />
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })()}
 
             {/* Auction cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { ShoppingCart, Flame, HelpCircle, Lock, LogOut, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, Flame, HelpCircle, Lock, LogOut, ShieldCheck, Home, LayoutGrid } from 'lucide-react';
 import { motion, useScroll, useSpring, useMotionValueEvent } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
-  activeTab: 'store' | 'auctions' | 'about' | 'admin';
-  setActiveTab: (tab: 'store' | 'auctions' | 'about' | 'admin') => void;
+  activeTab: 'store' | 'catalog' | 'auctions' | 'about' | 'admin';
+  setActiveTab: (tab: 'store' | 'catalog' | 'auctions' | 'about' | 'admin') => void;
   cartCount: number;
   onCartClick: () => void;
 }
 
 interface NavItem {
-  id: 'store' | 'auctions' | 'about';
+  id: 'store' | 'catalog' | 'auctions' | 'about';
   label: string;
   icon: any;
   badge?: string;
@@ -32,7 +32,8 @@ export default function Navbar({ activeTab, setActiveTab, cartCount, onCartClick
   const isMinimized = isScrolled && !isHovered;
 
   const navItems: NavItem[] = [
-    { id: 'store', label: 'Catálogo', icon: ShoppingCart },
+    { id: 'store', label: 'Início', icon: Home },
+    { id: 'catalog', label: 'Catálogo', icon: LayoutGrid },
     { id: 'auctions', label: 'Leilões', icon: Flame, badge: 'LIVE' },
     { id: 'about', label: 'Sobre', icon: HelpCircle },
   ];
