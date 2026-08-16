@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, signIn, signOut, getSession, onAuthStateChange } from '../lib/auth';
+import { User, signIn, signOut, getSession, onAuthStateChange, verifyMfaCode, SignInResult } from '../lib/auth';
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<SignInResult>;
+  confirmMfa: (factorId: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -26,9 +27,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const data = await signIn(email, password);
-    setUser(data.user);
+  const login = async (email: string, password: string): Promise<SignInResult> => {
+    const res = await signIn(email, password);
+    if (!res.mfaRequired && res.user) {
+      setUser(res.user);
+    }
+    return res;
+  };
+
+  const confirmMfa = async (factorId: string, code: string) => {
+    const res = await verifyMfaCode(factorId, code);
+    const session = await getSession();
+    setUser(session?.user ?? res.user ?? null);
   };
 
   const logout = async () => {
@@ -37,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, confirmMfa, logout }}>
       {children}
     </AuthContext.Provider>
   );

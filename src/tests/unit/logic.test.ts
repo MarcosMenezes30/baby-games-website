@@ -245,3 +245,84 @@ describe('Domain validations', () => {
     expect(result.length).toBeLessThanOrEqual(8);
   });
 });
+
+// ─── 6. 2FA / MFA TOTP logic ──────────────────────────────────────────────────
+describe('2FA / MFA TOTP validations', () => {
+  function sanitizeTotpCode(input: string): string {
+    return input.replace(/\D/g, '').slice(0, 6);
+  }
+
+  function isValidTotpCode(code: string): boolean {
+    return /^\d{6}$/.test(code.trim());
+  }
+
+  it('limpa caracteres não numéricos do código 2FA', () => {
+    expect(sanitizeTotpCode('123-456')).toBe('123456');
+    expect(sanitizeTotpCode('abc 456 789')).toBe('456789');
+    expect(sanitizeTotpCode('98 76 54')).toBe('987654');
+  });
+
+  it('trunca códigos com mais de 6 dígitos', () => {
+    expect(sanitizeTotpCode('123456789')).toBe('123456');
+  });
+
+  it('valida formato de código de 6 dígitos', () => {
+    expect(isValidTotpCode('123456')).toBe(true);
+    expect(isValidTotpCode('000000')).toBe(true);
+    expect(isValidTotpCode('12345')).toBe(false);
+    expect(isValidTotpCode('1234567')).toBe(false);
+    expect(isValidTotpCode('abcdef')).toBe(false);
+    expect(isValidTotpCode('')).toBe(false);
+  });
+});
+
+// ─── 7. Device detection & persistence logic ──────────────────────────────────
+import {
+  detectCurrentDeviceInfo,
+  getCurrentDeviceId,
+  saveCurrentDeviceId,
+  clearCurrentDeviceId,
+  saveLocalDevicesList,
+  getLocalDevicesList
+} from '../../lib/device';
+
+describe('Device detection & persistence logic', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('detectCurrentDeviceInfo retorna tipo de dispositivo, OS e sugestão de nome', () => {
+    const info = detectCurrentDeviceInfo();
+    expect(info).toBeDefined();
+    expect(['desktop', 'mobile', 'tablet']).toContain(info.deviceType);
+    expect(info.os).toBeDefined();
+    expect(info.browser).toBeDefined();
+    expect(info.suggestedName.length).toBeGreaterThan(0);
+  });
+
+  it('salva e recupera o ID persistente do dispositivo atual', () => {
+    expect(getCurrentDeviceId()).toBeNull();
+    saveCurrentDeviceId('device-abc-123');
+    expect(getCurrentDeviceId()).toBe('device-abc-123');
+    clearCurrentDeviceId();
+    expect(getCurrentDeviceId()).toBeNull();
+  });
+
+  it('salva e lista dispositivos locais corretamente', () => {
+    expect(getLocalDevicesList()).toEqual([]);
+    const testDevices = [
+      {
+        id: 'dev-1',
+        userName: 'Marcos',
+        deviceName: 'MacBook Air',
+        deviceType: 'desktop' as const,
+        browser: 'Chrome',
+        os: 'macOS',
+        lastActiveAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    saveLocalDevicesList(testDevices);
+    expect(getLocalDevicesList()).toEqual(testDevices);
+  });
+});

@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
-import { Product, Auction, OrderLog } from '../types';
+import { Product, Auction, OrderLog, AdminDevice } from '../types';
+import { getLocalDevicesList, saveLocalDevicesList, saveCurrentDeviceId, clearCurrentDeviceId, getCurrentDeviceId } from './device';
 
 // ─── PRODUCTS ────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,9 @@ export async function createAuction(auction: Omit<Auction, 'id'>): Promise<Aucti
 }
 
 export async function updateAuction(id: string, updates: Partial<Auction>): Promise<void> {
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+  if (!isUuid) return;
+
   const dbUpdates: Record<string, unknown> = {};
   if (updates.title !== undefined) dbUpdates.title = updates.title;
   if (updates.description !== undefined) dbUpdates.description = updates.description;
@@ -171,6 +175,12 @@ export async function updateAuction(id: string, updates: Partial<Auction>): Prom
 }
 
 export async function deleteAuction(id: string): Promise<void> {
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id);
+  if (!isUuid) {
+    // ID mock/local não existe na tabela UUID do Supabase
+    return;
+  }
+
   try {
     const { error } = await supabase
       .from('auctions')
@@ -253,4 +263,111 @@ export async function updateOrderStatus(id: string, status: 'Pendente' | 'Conclu
     .eq('id', id);
 
   if (error) throw error;
+}
+
+// ─── ADMIN CONNECTED DEVICES ──────────────────────────────────────────────────
+
+export async function fetchAdminDevices(): Promise<AdminDevice[]> {
+  try {
+    const { data, error } = await supabase
+      .from('admin_devices')
+      .select('*')
+      .order('last_active_at', { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      const mapped: AdminDevice[] = data.map(row => ({
+        id: row.id,
+        userName: row.user_name,
+        deviceName: row.device_name,
+        deviceType: (row.device_type as AdminDevice['deviceType']) || 'desktop',
+        browser: row.browser || 'Navegador Web',
+        os: row.os || 'Outro',
+        lastActiveAt: row.last_active_at || new Date().toISOString(),
+        createdAt: row.created_at || new Date().toISOString(),
+      }));
+      saveLocalDevicesList(mapped);
+      return mapped;
+    }
+  } catch (err) {
+    console.warn('[fetchAdminDevices] Using local fallback:', err);
+  }
+
+  return getLocalDevicesList();
+}
+
+export async function registerAdminDevice(device: AdminDevice): Promise<AdminDevice> {
+  const localList = getLocalDevicesList();
+  const existingIdx = localList.findIndex(d => d.id === device.id);
+  const updatedList = existingIdx >= 0
+    ? localList.map(d => (d.id === device.id ? { ...d, ...device, lastActiveAt: new Date().toISOString() } : d))
+    : [device, ...localList];
+
+  saveLocalDevicesList(updatedList);
+  saveCurrentDeviceId(device.id);
+
+  try {
+    const { data, error } = await supabase
+      .from('admin_devices')
+      .upsert({
+        id: device.id,
+        user_name: device.userName,
+        device_name: device.deviceName,
+        device_type: device.deviceType,
+        browser: device.browser,
+        os: device.os,
+        last_active_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      return {
+        id: data.id,
+        userName: data.user_name,
+        deviceName: data.device_name,
+        deviceType: data.device_type,
+        browser: data.browser,
+        os: data.os,
+        lastActiveAt: data.last_active_at,
+        createdAt: data.created_at,
+      };
+    }
+  } catch (err) {
+    console.warn('[registerAdminDevice] Saved to local storage:', err);
+  }
+
+  return device;
+}
+
+export async function updateAdminDeviceLastActive(id: string): Promise<void> {
+  const localList = getLocalDevicesList();
+  const updated = localList.map(d => (d.id === id ? { ...d, lastActiveAt: new Date().toISOString() } : d));
+  saveLocalDevicesList(updated);
+
+  try {
+    await supabase
+      .from('admin_devices')
+      .update({ last_active_at: new Date().toISOString() })
+      .eq('id', id);
+  } catch {
+    // Ignore offline errors
+  }
+}
+
+export async function revokeAdminDevice(id: string): Promise<void> {
+  const localList = getLocalDevicesList().filter(d => d.id !== id);
+  saveLocalDevicesList(localList);
+
+  if (getCurrentDeviceId() === id) {
+    clearCurrentDeviceId();
+  }
+
+  try {
+    await supabase
+      .from('admin_devices')
+      .delete()
+      .eq('id', id);
+  } catch (err) {
+    console.warn('[revokeAdminDevice] Removed from local storage:', err);
+  }
 }

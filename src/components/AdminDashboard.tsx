@@ -1,14 +1,18 @@
-import { useState, useMemo, FormEvent } from 'react';
+import { useState, useMemo, useEffect, FormEvent } from 'react';
 import {
   TrendingUp, ShoppingBag, Flame, PlusCircle, Trash2, Edit, Save,
   X, Check, DollarSign, Package, Clock, AlertTriangle,
   LayoutGrid, List, FileText, Search, Gavel, RefreshCw,
   ArrowUpRight, ArrowDownRight, Star, ToggleLeft, ToggleRight, Loader2,
-  Phone, Tag
+  Phone, Tag, KeyRound, QrCode, Copy, CheckCheck, ShieldCheck,
+  Laptop, Smartphone, Tablet, User, Lock, Eye, EyeOff, Shield, MonitorSmartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Product, Auction, OrderLog } from '../types';
+import { Product, Auction, OrderLog, AdminDevice } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { enrollMfa, unenrollMfa, verifyMfaCode, getMfaStatus, updateAdminPassword } from '../lib/auth';
+import { fetchAdminDevices, revokeAdminDevice } from '../lib/api';
+import { getCurrentDeviceId } from '../lib/device';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -28,7 +32,7 @@ interface AdminDashboardProps {
   onRemoveTheme: (theme: string) => void;
 }
 
-type AdminTab = 'overview' | 'products' | 'auctions' | 'orders';
+type AdminTab = 'overview' | 'products' | 'auctions' | 'orders' | 'devices';
 type FeedbackType = 'success' | 'error';
 
 export default function AdminDashboard({
@@ -63,6 +67,34 @@ export default function AdminDashboard({
   const [isManagingTags, setIsManagingTags] = useState(false);
   const [newCategoryInput, setNewCategoryInput] = useState('');
   const [newThemeInput, setNewThemeInput] = useState('');
+
+  // MFA / 2FA (Authenticator App) state
+  const [mfaStatus, setMfaStatus] = useState<{ enabled: boolean; factorId?: string }>({ enabled: false });
+  const [isMfaModalOpen, setIsMfaModalOpen] = useState(false);
+  const [mfaEnrollData, setMfaEnrollData] = useState<{ factorId: string; qrCode: string; secret: string } | null>(null);
+  const [mfaVerifyCode, setMfaVerifyCode] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaCopied, setMfaCopied] = useState(false);
+
+  // Connected Devices state
+  const [devices, setDevices] = useState<AdminDevice[]>([]);
+  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
+
+  // Change password state
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMfaCode, setPasswordMfaCode] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getMfaStatus().then(res => setMfaStatus(res));
+    fetchAdminDevices().then(setDevices);
+    setCurrentDeviceId(getCurrentDeviceId());
+  }, []);
 
   // Products
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -142,9 +174,141 @@ export default function AdminDashboard({
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    try { await onRefresh(); showFeedback('Dados sincronizados com o Supabase!'); }
+    try {
+      await onRefresh();
+      const [mfa, devs] = await Promise.all([
+        getMfaStatus(),
+        fetchAdminDevices(),
+      ]);
+      setMfaStatus(mfa);
+      setDevices(devs);
+      setCurrentDeviceId(getCurrentDeviceId());
+      showFeedback('Dados sincronizados com o Supabase!');
+    }
     catch { showFeedback('Erro ao sincronizar dados.', 'error'); }
     finally { setIsRefreshing(false); }
+  };
+
+  // ─── Device & Password handlers ───────────────────────────────────────────
+  const handleRevokeDevice = async (id: string) => {
+    const isCurrent = id === currentDeviceId;
+    const msg = isCurrent
+      ? 'Remover o acesso deste dispositivo desconectará sua sessão atual. Deseja continuar?'
+      : 'Tem certeza que deseja remover o acesso deste dispositivo?';
+
+    if (!window.confirm(msg)) return;
+
+    try {
+      await revokeAdminDevice(id);
+      setDevices(prev => prev.filter(d => d.id !== id));
+      showFeedback('Acesso do dispositivo revogado.');
+      if (isCurrent) {
+        window.location.reload();
+      }
+    } catch {
+      showFeedback('Erro ao revogar acesso do dispositivo.', 'error');
+    }
+  };
+
+  const handleChangePasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+
+    if (newPassword.length < 6) {
+      setPasswordError('A nova senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('As senhas digitadas não coincidem.');
+      return;
+    }
+
+    if (mfaStatus.enabled && (!passwordMfaCode || passwordMfaCode.trim().length < 6)) {
+      setPasswordError('Digite o código de 6 dígitos do seu aplicativo autenticador.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      // If 2FA is active, verify code first
+      if (mfaStatus.enabled && mfaStatus.factorId) {
+        await verifyMfaCode(mfaStatus.factorId, passwordMfaCode.trim());
+      }
+
+      await updateAdminPassword(newPassword);
+      setIsChangingPassword(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordMfaCode('');
+      showFeedback('Senha do administrador alterada com sucesso!');
+    } catch (err: any) {
+      setPasswordError(
+        err?.message?.includes('Invalid') || err?.message?.includes('code')
+          ? 'Código do autenticador inválido ou expirado.'
+          : err?.message || 'Erro ao alterar a senha. Tente novamente.'
+      );
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // ─── MFA Handlers ─────────────────────────────────────────────────────────
+  const handleOpenMfaModal = async () => {
+    setMfaError(null);
+    setMfaVerifyCode('');
+    setIsMfaModalOpen(true);
+
+    if (!mfaStatus.enabled && !mfaEnrollData) {
+      setMfaLoading(true);
+      try {
+        const data = await enrollMfa(user?.email || 'admin@babygames.com.br');
+        setMfaEnrollData({
+          factorId: data.id,
+          qrCode: data.totp.qr_code,
+          secret: data.totp.secret,
+        });
+      } catch (err: any) {
+        setMfaError(err?.message || 'Erro ao gerar QR Code para 2FA.');
+      } finally {
+        setMfaLoading(false);
+      }
+    }
+  };
+
+  const handleActivateMfa = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!mfaEnrollData || !mfaVerifyCode) return;
+    setMfaLoading(true);
+    setMfaError(null);
+    try {
+      await verifyMfaCode(mfaEnrollData.factorId, mfaVerifyCode.trim());
+      setMfaStatus({ enabled: true, factorId: mfaEnrollData.factorId });
+      setIsMfaModalOpen(false);
+      setMfaEnrollData(null);
+      showFeedback('App Authenticator (2FA) ativado com sucesso!');
+    } catch {
+      setMfaError('Código inválido ou expirado. Verifique os 6 dígitos no seu app e tente novamente.');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleDisableMfa = async () => {
+    if (!mfaStatus.factorId) return;
+    if (!window.confirm('Tem certeza que deseja desativar o 2FA? Sua conta ficará protegida apenas por senha.')) return;
+    setMfaLoading(true);
+    try {
+      await unenrollMfa(mfaStatus.factorId);
+      setMfaStatus({ enabled: false });
+      setMfaEnrollData(null);
+      setIsMfaModalOpen(false);
+      showFeedback('Autenticação em 2 Etapas desativada.');
+    } catch {
+      showFeedback('Erro ao desativar 2FA.', 'error');
+    } finally {
+      setMfaLoading(false);
+    }
   };
 
   // ─── Product handlers ─────────────────────────────────────────────────────
@@ -257,6 +421,7 @@ export default function AdminDashboard({
     { id: 'products', label: 'Estoque', count: products.length },
     { id: 'auctions', label: 'Leilões', count: auctions.length },
     { id: 'orders', label: 'Pedidos', count: orderLogs.length },
+    { id: 'devices', label: 'Dispositivos & Segurança', count: devices.length },
   ];
 
   const statCards = [
@@ -336,12 +501,30 @@ export default function AdminDashboard({
               </div>
             </div>
           </div>
-          <button onClick={handleRefresh} disabled={isRefreshing}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
-            style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)', color: '#a78bfa' }}>
-            {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            {isRefreshing ? 'Sincronizando...' : 'Atualizar Dados'}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* 2FA Security Control */}
+            <button
+              id="admin-mfa-manage-btn"
+              onClick={handleOpenMfaModal}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer hover:opacity-90"
+              style={{
+                background: mfaStatus.enabled ? 'rgba(52,211,153,0.12)' : 'rgba(245,158,11,0.12)',
+                border: mfaStatus.enabled ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(245,158,11,0.3)',
+                color: mfaStatus.enabled ? '#34d399' : '#f59e0b',
+              }}
+              title="Configurar Autenticação em 2 Etapas (App Authenticator)"
+            >
+              <KeyRound className="h-4 w-4" />
+              <span>{mfaStatus.enabled ? '2FA: Ativado' : 'Configurar 2FA'}</span>
+            </button>
+
+            <button onClick={handleRefresh} disabled={isRefreshing}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
+              style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)', color: '#a78bfa' }}>
+              {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {isRefreshing ? 'Sincronizando...' : 'Atualizar Dados'}
+            </button>
+          </div>
         </div>
 
         {/* Feedback */}
@@ -1231,7 +1414,554 @@ export default function AdminDashboard({
               </div>
             )}
 
+            {/* ════ DEVICES & SECURITY ════ */}
+            {adminTab === 'devices' && (
+              <div className="space-y-8">
+                {/* Security Actions Bar */}
+                <div
+                  className="rounded-3xl p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-6"
+                  style={{
+                    background: 'rgba(124,58,237,0.06)',
+                    border: '1px solid rgba(124,58,237,0.2)',
+                  }}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-violet-400" />
+                      <h3 className="text-lg font-black text-white font-display uppercase tracking-tight">
+                        Segurança & Acessos da Conta
+                      </h3>
+                    </div>
+                    <p className="text-xs text-white/50 max-w-xl font-sans">
+                      Controle os navegadores autorizados e atualize as credenciais da conta administrativa com autenticação em duas etapas.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      id="admin-change-password-btn"
+                      onClick={() => {
+                        setPasswordError(null);
+                        setNewPassword('');
+                        setConfirmPassword('');
+                        setPasswordMfaCode('');
+                        setIsChangingPassword(true);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-display font-bold text-xs uppercase tracking-wider text-white transition-all cursor-pointer hover:opacity-90"
+                      style={{
+                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                        boxShadow: '0 0 20px rgba(245,158,11,0.25)',
+                      }}
+                    >
+                      <Lock className="h-4 w-4" />
+                      Alterar Senha
+                    </button>
+
+                    <button
+                      onClick={handleOpenMfaModal}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer"
+                      style={{
+                        background: mfaStatus.enabled ? 'rgba(52,211,153,0.15)' : 'rgba(124,58,237,0.15)',
+                        border: mfaStatus.enabled ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(124,58,237,0.3)',
+                        color: mfaStatus.enabled ? '#34d399' : '#c084fc',
+                      }}
+                    >
+                      <KeyRound className="h-4 w-4" />
+                      {mfaStatus.enabled ? '2FA Ativo (Gerenciar)' : 'Configurar 2FA'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Devices List */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-base font-black text-white font-display uppercase tracking-tight">
+                        Dispositivos Conectados ({devices.length})
+                      </h4>
+                      <p className="text-xs text-white/40">
+                        Navegadores e aparelhos com sessão autenticada nesta conta
+                      </p>
+                    </div>
+                  </div>
+
+                  {devices.length === 0 ? (
+                    <div className="py-16 text-center text-white/30 font-mono italic text-sm rounded-2xl glass p-8">
+                      Nenhum dispositivo registrado ainda. Dispositivos são registrados automaticamente no login.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {devices.map((dev) => {
+                        const isCurrent = dev.id === currentDeviceId;
+                        const DevIcon = dev.deviceType === 'mobile'
+                          ? Smartphone
+                          : dev.deviceType === 'tablet'
+                            ? Tablet
+                            : Laptop;
+
+                        return (
+                          <motion.div
+                            key={dev.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="rounded-2xl p-5 space-y-4 transition-all relative overflow-hidden"
+                            style={{
+                              background: isCurrent ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.02)',
+                              border: isCurrent ? '1px solid rgba(124,58,237,0.35)' : '1px solid rgba(255,255,255,0.06)',
+                              boxShadow: isCurrent ? '0 0 25px rgba(124,58,237,0.1)' : 'none',
+                            }}
+                          >
+                            {isCurrent && (
+                              <div
+                                className="absolute top-0 right-0 px-3 py-1 text-[10px] font-mono font-bold rounded-bl-xl uppercase tracking-wider"
+                                style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399', borderLeft: '1px solid rgba(52,211,153,0.3)', borderBottom: '1px solid rgba(52,211,153,0.3)' }}
+                              >
+                                ● Este Dispositivo
+                              </div>
+                            )}
+
+                            <div className="flex items-start gap-3.5">
+                              <div
+                                className="p-3 rounded-2xl flex items-center justify-center flex-shrink-0"
+                                style={{
+                                  background: isCurrent ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)',
+                                  border: isCurrent ? '1px solid rgba(124,58,237,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                                  color: isCurrent ? '#c084fc' : 'rgba(255,255,255,0.6)',
+                                }}
+                              >
+                                <DevIcon className="h-6 w-6" />
+                              </div>
+
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <h5 className="text-sm font-bold text-white truncate">
+                                  {dev.deviceName}
+                                </h5>
+                                <div className="flex items-center gap-1.5 text-xs text-white/60">
+                                  <User className="h-3 w-3 text-amber-400" />
+                                  <span className="truncate">{dev.userName}</span>
+                                </div>
+                                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/70">
+                                    {dev.os}
+                                  </span>
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-violet-300">
+                                    {dev.browser}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div
+                              className="flex items-center justify-between pt-3 text-xs"
+                              style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+                            >
+                              <div className="flex items-center gap-1.5 text-white/40 font-mono text-[11px]">
+                                <Clock className="h-3 w-3" />
+                                <span>Último acesso: {new Date(dev.lastActiveAt).toLocaleString('pt-BR')}</span>
+                              </div>
+
+                              <button
+                                onClick={() => handleRevokeDevice(dev.id)}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all cursor-pointer"
+                                title="Remover acesso deste dispositivo"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Remover Acesso
+                              </button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
           </motion.div>
+        </AnimatePresence>
+
+        {/* 2FA Security Modal */}
+        <AnimatePresence>
+          {isMfaModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: 'rgba(5,5,16,0.88)', backdropFilter: 'blur(8px)' }}
+              onClick={(e) => { if (e.target === e.currentTarget) setIsMfaModalOpen(false); }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                className="w-full max-w-lg rounded-3xl p-6 sm:p-8 space-y-6 overflow-y-auto max-h-[90vh]"
+                style={{
+                  background: 'rgba(13,13,26,0.98)',
+                  border: mfaStatus.enabled ? '1px solid rgba(52,211,153,0.35)' : '1px solid rgba(124,58,237,0.35)',
+                  boxShadow: mfaStatus.enabled ? '0 0 50px rgba(52,211,153,0.15)' : '0 0 50px rgba(124,58,237,0.2)',
+                }}
+              >
+                {/* Modal Header */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="p-3 rounded-2xl flex items-center justify-center"
+                      style={{
+                        background: mfaStatus.enabled ? 'rgba(52,211,153,0.15)' : 'rgba(124,58,237,0.15)',
+                        border: mfaStatus.enabled ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(124,58,237,0.3)',
+                        color: mfaStatus.enabled ? '#34d399' : '#c084fc',
+                      }}
+                    >
+                      <KeyRound className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-white font-display uppercase tracking-tight">
+                        {mfaStatus.enabled ? 'Segurança 2FA Ativada' : 'Configurar App Authenticator'}
+                      </h3>
+                      <p className="text-xs text-white/50">
+                        {mfaStatus.enabled
+                          ? 'Sua conta exige código de 6 dígitos no login'
+                          : 'Adicione proteção extra com Google Authenticator ou Authy'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsMfaModalOpen(false)}
+                    className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                {mfaStatus.enabled ? (
+                  <div className="space-y-6">
+                    <div
+                      className="p-4 rounded-2xl space-y-2"
+                      style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)' }}
+                    >
+                      <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm font-display">
+                        <ShieldCheck className="h-4 w-4" />
+                        Autenticação em 2 Etapas ativa
+                      </div>
+                      <p className="text-xs text-white/70 leading-relaxed">
+                        Sua conta está protegida por verificação em duas etapas via TOTP. Sempre que fizer login na conta de administrador, você precisará informar o código gerado no seu aplicativo autenticador.
+                      </p>
+                    </div>
+
+                    <div className="pt-2 flex justify-between items-center">
+                      <button
+                        onClick={handleDisableMfa}
+                        disabled={mfaLoading}
+                        className="px-4 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 border border-red-500/30 transition-all cursor-pointer"
+                      >
+                        {mfaLoading ? 'Desativando...' : 'Desativar 2FA'}
+                      </button>
+                      <button
+                        onClick={() => setIsMfaModalOpen(false)}
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-white/10 hover:bg-white/15 transition-all cursor-pointer"
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {mfaLoading && !mfaEnrollData && (
+                      <div className="py-12 flex flex-col items-center justify-center space-y-3 text-center">
+                        <Loader2 className="h-8 w-8 text-violet-400 animate-spin" />
+                        <span className="text-xs font-mono text-white/50">Gerando chaves de segurança...</span>
+                      </div>
+                    )}
+
+                    {mfaEnrollData && (
+                      <div className="space-y-5">
+                        {/* Step 1 */}
+                        <div className="space-y-3">
+                          <span className="text-xs font-display font-bold uppercase tracking-wider text-violet-400">
+                            1. Escaneie o QR Code no seu aplicativo autenticador
+                          </span>
+                          <p className="text-xs text-white/50">
+                            Abra o <strong className="text-white">Google Authenticator</strong>, <strong className="text-white">Authy</strong>, <strong className="text-white">1Password</strong> ou app similar e adicione uma nova conta escaneando o código abaixo:
+                          </p>
+
+                          {/* QR Code Container */}
+                          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white w-fit mx-auto shadow-xl">
+                            <div
+                              className="w-44 h-44 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                              dangerouslySetInnerHTML={{ __html: mfaEnrollData.qrCode }}
+                            />
+                          </div>
+
+                          {/* Secret key fallback */}
+                          <div className="space-y-1 pt-1">
+                            <label className="text-[10px] uppercase font-mono text-white/40">
+                              Ou digite a chave manualmente no app:
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                readOnly
+                                value={mfaEnrollData.secret}
+                                className="flex-1 px-3 py-2 rounded-xl text-xs font-mono text-amber-300 select-all outline-none"
+                                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(mfaEnrollData.secret);
+                                  setMfaCopied(true);
+                                  setTimeout(() => setMfaCopied(false), 2500);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer"
+                                style={{
+                                  background: mfaCopied ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)',
+                                  color: mfaCopied ? '#34d399' : 'white',
+                                  border: mfaCopied ? '1px solid rgba(52,211,153,0.4)' : '1px solid rgba(255,255,255,0.1)',
+                                }}
+                              >
+                                {mfaCopied ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                {mfaCopied ? 'Copiado!' : 'Copiar'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <form onSubmit={handleActivateMfa} className="space-y-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                          <div className="space-y-2">
+                            <span className="text-xs font-display font-bold uppercase tracking-wider text-pink-400">
+                              2. Digite o código de 6 dígitos gerado pelo app
+                            </span>
+                            <input
+                              type="text"
+                              required
+                              maxLength={6}
+                              inputMode="numeric"
+                              value={mfaVerifyCode}
+                              onChange={e => setMfaVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                              placeholder="000000"
+                              className="w-full py-3.5 text-center rounded-xl text-xl font-mono font-bold text-white tracking-[0.3em] outline-none"
+                              style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)' }}
+                              onFocus={e => (e.currentTarget.style.borderColor = '#A78BFA')}
+                              onBlur={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.3)')}
+                            />
+                          </div>
+
+                          {mfaError && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl text-xs text-red-400 bg-red-500/10 border border-red-500/20">
+                              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                              {mfaError}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsMfaModalOpen(false)}
+                              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/50 hover:text-white transition-colors cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={mfaLoading || mfaVerifyCode.length < 6}
+                              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-display font-bold text-xs uppercase tracking-wider text-white transition-all cursor-pointer disabled:opacity-40"
+                              style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)', boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}
+                            >
+                              {mfaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                              Validar e Ativar 2FA
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Change Password Modal (Requires 2FA Authenticator) */}
+        <AnimatePresence>
+          {isChangingPassword && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: 'rgba(5,5,16,0.88)', backdropFilter: 'blur(8px)' }}
+              onClick={(e) => { if (e.target === e.currentTarget) setIsChangingPassword(false); }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                className="w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-6 overflow-y-auto max-h-[90vh]"
+                style={{
+                  background: 'rgba(13,13,26,0.98)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  boxShadow: '0 0 50px rgba(245,158,11,0.15)',
+                }}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="p-3 rounded-2xl flex items-center justify-center text-amber-400"
+                      style={{
+                        background: 'rgba(245,158,11,0.15)',
+                        border: '1px solid rgba(245,158,11,0.3)',
+                      }}
+                    >
+                      <Lock className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-white font-display uppercase tracking-tight">
+                        Alterar Senha
+                      </h3>
+                      <p className="text-xs text-white/50">
+                        {mfaStatus.enabled
+                          ? 'Autenticação com App Authenticator obrigatória'
+                          : 'Atualize a senha de acesso ao painel admin'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsChangingPassword(false)}
+                    className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Form */}
+                <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
+                  {/* New Password */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-white/50 font-mono uppercase tracking-wider">
+                      Nova Senha (mínimo 6 caracteres) *
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                      <input
+                        id="admin-new-password"
+                        type={showNewPassword ? 'text' : 'password'}
+                        required
+                        minLength={6}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full pl-10 pr-12 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none transition-all"
+                        style={{
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                        }}
+                        onFocus={(e) => (e.currentTarget.style.borderColor = '#f59e0b')}
+                        onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(v => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors cursor-pointer"
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-white/50 font-mono uppercase tracking-wider">
+                      Confirmar Nova Senha *
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                      <input
+                        id="admin-confirm-password"
+                        type={showNewPassword ? 'text' : 'password'}
+                        required
+                        minLength={6}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-white/20 outline-none transition-all"
+                        style={{
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                        }}
+                        onFocus={(e) => (e.currentTarget.style.borderColor = '#f59e0b')}
+                        onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 2FA TOTP Code (Mandatory for security) */}
+                  <div className="space-y-1.5 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div className="flex items-center gap-1.5 text-xs text-violet-300 font-mono font-bold">
+                      <KeyRound className="h-3.5 w-3.5" />
+                      Código de Autorização 2FA (Authenticator) *
+                    </div>
+                    <p className="text-[11px] text-white/40">
+                      {mfaStatus.enabled
+                        ? 'Digite o código de 6 dígitos gerado no Google Authenticator / Authy para confirmar.'
+                        : 'Recomendado: Configure o 2FA para segurança máxima nas alterações de senha.'}
+                    </p>
+                    <input
+                      id="admin-password-mfa-code"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      required={mfaStatus.enabled}
+                      value={passwordMfaCode}
+                      onChange={(e) => setPasswordMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      className="w-full py-3 text-center rounded-xl text-lg font-mono font-bold text-white tracking-[0.3em] outline-none"
+                      style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.3)' }}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#A78BFA')}
+                      onBlur={e => (e.currentTarget.style.borderColor = 'rgba(124,58,237,0.3)')}
+                    />
+                  </div>
+
+                  {/* Error Alert */}
+                  {passwordError && (
+                    <div className="flex items-center gap-2 p-3 rounded-xl text-xs text-red-400 bg-red-500/10 border border-red-500/20">
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                      {passwordError}
+                    </div>
+                  )}
+
+                  {/* Submit buttons */}
+                  <div className="flex items-center justify-between gap-3 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsChangingPassword(false)}
+                      className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/50 hover:text-white transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={passwordLoading || newPassword.length < 6 || (mfaStatus.enabled && passwordMfaCode.length < 6)}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-display font-bold text-xs uppercase tracking-wider text-black transition-all cursor-pointer disabled:opacity-40"
+                      style={{
+                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                        boxShadow: '0 0 20px rgba(245,158,11,0.25)',
+                      }}
+                    >
+                      {passwordLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      Salvar Nova Senha
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
         </AnimatePresence>
 
       </div>

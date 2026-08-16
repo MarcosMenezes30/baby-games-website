@@ -1,5 +1,32 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import React from 'react';
+import { vi, beforeEach, afterEach } from 'vitest';
+
+// ─── Mock localStorage ───────────────────────────────────────────────────────
+const storageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+  };
+})();
+
+Object.defineProperty(globalThis, 'localStorage', {
+  value: storageMock,
+  writable: true,
+});
 
 // ─── Mock Supabase ────────────────────────────────────────────────────────────
 // Evita chamadas reais à API durante os testes unitários/integração.
@@ -14,6 +41,31 @@ vi.mock('../lib/supabase', () => ({
       order: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: null, error: null }),
     })),
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      signInWithPassword: vi.fn().mockResolvedValue({ data: { user: null, session: null }, error: null }),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+      updateUser: vi.fn().mockResolvedValue({ data: { user: {} }, error: null }),
+      onAuthStateChange: vi.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      }),
+      mfa: {
+        getAuthenticatorAssuranceLevel: vi.fn().mockResolvedValue({
+          data: { currentLevel: null, nextLevel: null },
+          error: null,
+        }),
+        listFactors: vi.fn().mockResolvedValue({
+          data: { all: [], totp: [] },
+          error: null,
+        }),
+        enroll: vi.fn().mockResolvedValue({
+          data: { id: 'mock-factor-id', totp: { qr_code: '<svg></svg>', secret: 'MOCKSECRET123' } },
+          error: null,
+        }),
+        challengeAndVerify: vi.fn().mockResolvedValue({ data: { user: {} }, error: null }),
+        unenroll: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      },
+    },
   },
 }));
 

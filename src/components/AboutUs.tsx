@@ -417,46 +417,76 @@ export default function AboutUs({ auctions, showAboutOnly = false, showAuctionsO
             })()}
 
             {/* Auction cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {auctions.map((auc, idx) => {
-                const isEnded = auc.status === 'ended';
-                return (
-                  <motion.div
-                    key={auc.id}
-                    id={`auction-card-${auc.id}`}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-40px' }}
-                    transition={{ duration: 0.5, delay: idx * 0.12, type: 'spring', stiffness: 90 }}
-                    whileHover={!isEnded ? { y: -10, scale: 1.02 } : {}}
-                    className="relative rounded-2xl overflow-hidden flex flex-col transition-all duration-300"
-                    style={{
-                      background: 'rgba(17,17,40,0.9)',
-                      border: isEnded ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(236,72,153,0.25)',
-                      boxShadow: isEnded ? 'none' : '0 0 20px rgba(236,72,153,0.06), 0 4px 20px rgba(0,0,0,0.4)',
-                      opacity: isEnded ? 0.7 : 1,
-                    }}
-                  >
-                    {/* Animated border for active */}
-                    {!isEnded && (
-                      <motion.div
-                        className="absolute inset-0 rounded-2xl pointer-events-none"
-                        animate={{ boxShadow: ['0 0 10px rgba(236,72,153,0.1)', '0 0 25px rgba(236,72,153,0.25)', '0 0 10px rgba(236,72,153,0.1)'] }}
-                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    )}
+            {auctions.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-center py-12 px-6 glass rounded-2xl space-y-4 max-w-xl mx-auto"
+                style={{ border: '1px dashed rgba(236,72,153,0.3)', background: 'rgba(17,17,40,0.7)' }}
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl mx-auto"
+                  style={{ background: 'rgba(236,72,153,0.1)', border: '1px solid rgba(236,72,153,0.3)' }}>
+                  <Gavel className="h-7 w-7 text-pink-400" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-display font-700 text-white text-lg">Nenhum leilão ativo no momento</h4>
+                  <p className="text-white/45 text-xs font-sans max-w-md mx-auto">
+                    Novos lotes e peças raras são anunciados diretamente no nosso grupo VIP do WhatsApp. Participe para não perder o próximo!
+                  </p>
+                </div>
+                <a
+                  href={`https://wa.me/${cleanPhone}?text=Quero%20entrar%20no%20grupo%20de%20leiloes`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 py-3 px-6 rounded-xl text-white font-display font-700 text-xs uppercase tracking-wider transition-all"
+                  style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 0 20px rgba(22,163,74,0.3)' }}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Entrar no Grupo de Leilões
+                </a>
+              </motion.div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {auctions.map((auc, idx) => {
+                  const isEnded = auc.status === 'ended';
+                  return (
+                    <motion.div
+                      key={auc.id}
+                      id={`auction-card-${auc.id}`}
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: '-40px' }}
+                      transition={{ duration: 0.5, delay: idx * 0.12, type: 'spring', stiffness: 90 }}
+                      whileHover={!isEnded ? { y: -10, scale: 1.02 } : {}}
+                      className="relative rounded-2xl overflow-hidden flex flex-col transition-all duration-300"
+                      style={{
+                        background: 'rgba(17,17,40,0.9)',
+                        border: isEnded ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(236,72,153,0.25)',
+                        boxShadow: isEnded ? 'none' : '0 0 20px rgba(236,72,153,0.06), 0 4px 20px rgba(0,0,0,0.4)',
+                        opacity: isEnded ? 0.7 : 1,
+                      }}
+                    >
+                      {/* Animated border for active */}
+                      {!isEnded && (
+                        <motion.div
+                          className="absolute inset-0 rounded-2xl pointer-events-none"
+                          animate={{ boxShadow: ['0 0 10px rgba(236,72,153,0.1)', '0 0 25px rgba(236,72,153,0.25)', '0 0 10px rgba(236,72,153,0.1)'] }}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                      )}
 
-                    {/* Image */}
-                    <div className="relative aspect-video overflow-hidden">
-                      <img src={auc.imageUrl} alt={auc.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(17,17,40,1) 0%, transparent 60%)' }} />
+                      {/* Image */}
+                      <div className="relative aspect-video overflow-hidden">
+                        <img src={auc.imageUrl} alt={auc.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(17,17,40,1) 0%, transparent 60%)' }} />
 
-                      {/* Status badge */}
-                      <div className="absolute top-3 left-3">
-                        {isEnded ? (
-                          <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold"
-                            style={{ background: 'rgba(75,85,99,0.8)', color: '#9CA3AF', backdropFilter: 'blur(4px)' }}>
-                            Finalizado
+                        {/* Status badge */}
+                        <div className="absolute top-3 left-3">
+                          {isEnded ? (
+                            <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold"
+                              style={{ background: 'rgba(75,85,99,0.8)', color: '#9CA3AF', backdropFilter: 'blur(4px)' }}>
+                              Finalizado
                           </span>
                         ) : (
                           <motion.div
@@ -530,6 +560,7 @@ export default function AboutUs({ auctions, showAboutOnly = false, showAuctionsO
                 );
               })}
             </div>
+          )}
           </div>
         )}
       </div>

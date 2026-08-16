@@ -158,14 +158,14 @@ export default function Navbar({ activeTab, setActiveTab, cartCount, onCartClick
                 )}
               </button>
 
-              {/* Admin lock icon (desktop) — opens login or shows logout */}
+              {/* Admin/Auth action button (desktop & mobile) */}
               {user ? (
                 <button
                   id="nav-logout-btn"
                   onClick={handleLogout}
-                  title="Sair do painel admin"
-                  className="hidden md:flex h-10 w-10 items-center justify-center rounded-xl border border-amber-500/20 text-amber-400/70 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all duration-300 cursor-pointer"
-                  style={{ background: 'rgba(245,158,11,0.06)' }}
+                  title="Sair da conta de admin"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-300 cursor-pointer"
+                  style={{ background: 'rgba(239,68,68,0.1)' }}
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
@@ -174,22 +174,12 @@ export default function Navbar({ activeTab, setActiveTab, cartCount, onCartClick
                   id="nav-admin-login-btn"
                   onClick={handleAdminClick}
                   title="Acesso administrativo"
-                  className="hidden md:flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] text-white/20 hover:text-amber-400/70 hover:border-amber-500/20 transition-all duration-300 cursor-pointer"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.06] text-white/20 hover:text-amber-400/70 hover:border-amber-500/20 transition-all duration-300 cursor-pointer"
                   style={{ background: 'rgba(255,255,255,0.02)' }}
                 >
                   <Lock className="h-3.5 w-3.5" />
                 </button>
               )}
-
-              {/* Mobile admin shortcut */}
-              <button
-                id="mobile-admin-shortcut"
-                onClick={user ? handleAdminClick : handleAdminClick}
-                className="md:hidden flex h-10 w-10 items-center justify-center rounded-xl border border-amber-500/20 text-amber-400/70 hover:bg-amber-500/10 transition-all duration-300 cursor-pointer"
-                style={{ background: 'rgba(245,158,11,0.06)' }}
-              >
-                {user ? <ShieldCheck className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-              </button>
             </div>
           </div>
         </div>

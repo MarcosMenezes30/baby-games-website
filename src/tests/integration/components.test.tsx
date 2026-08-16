@@ -8,6 +8,7 @@
  *   - Testimonials: renderização de depoimentos
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -262,5 +263,87 @@ describe('CartDrawer — component integration', () => {
     // Total = 3 x R$ 100,00 = R$ 300,00
     // Busca por texto que contenha "300" em qualquer formato
     expect(screen.getByText((content) => content.includes('300'))).toBeInTheDocument();
+  });
+});
+
+// ─── 4. AdminLogin component ──────────────────────────────────────────────────
+import AdminLogin from '../../components/AdminLogin';
+import { AuthProvider } from '../../context/AuthContext';
+
+describe('AdminLogin — component integration', () => {
+  it('renderiza os campos de e-mail e senha no passo inicial', () => {
+    render(
+      <AuthProvider>
+        <AdminLogin onSuccess={vi.fn()} onBack={vi.fn()} />
+      </AuthProvider>
+    );
+
+    expect(screen.getByPlaceholderText(/admin@babygames/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/••••••••/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /entrar no painel/i })).toBeInTheDocument();
+  });
+
+  it('chama onBack ao clicar em voltar para a loja', () => {
+    const onBack = vi.fn();
+
+    render(
+      <AuthProvider>
+        <AdminLogin onSuccess={vi.fn()} onBack={onBack} />
+      </AuthProvider>
+    );
+
+    const backBtn = document.getElementById('admin-login-back-btn') as HTMLElement;
+    fireEvent.click(backBtn);
+    expect(onBack).toHaveBeenCalled();
+  });
+});
+
+// ─── 5. AdminDashboard component ──────────────────────────────────────────────
+import AdminDashboard from '../../components/AdminDashboard';
+
+describe('AdminDashboard — component integration', () => {
+  const defaultAdminProps = {
+    products: INITIAL_PRODUCTS,
+    setProducts: vi.fn(),
+    auctions: [],
+    setAuctions: vi.fn(),
+    orderLogs: [],
+    setOrderLogs: vi.fn(),
+    onRefresh: vi.fn().mockResolvedValue(undefined),
+    whatsappNumber: '5515981579514',
+    onUpdateWhatsappNumber: vi.fn(),
+    categories: ['Funko Pop', 'Action Figure'],
+    themes: ['Marvel', 'Naruto'],
+    onAddCategory: vi.fn(),
+    onRemoveCategory: vi.fn(),
+    onAddTheme: vi.fn(),
+    onRemoveTheme: vi.fn(),
+  };
+
+  it('renderiza as abas de navegação incluindo Dispositivos & Segurança', () => {
+    render(
+      <AuthProvider>
+        <AdminDashboard {...defaultAdminProps} />
+      </AuthProvider>
+    );
+
+    expect(screen.getByRole('button', { name: /visão geral/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /estoque/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /leilões/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /pedidos/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /dispositivos & segurança/i })).toBeInTheDocument();
+  });
+
+  it('abre a aba Dispositivos & Segurança e exibe o botão Alterar Senha', () => {
+    render(
+      <AuthProvider>
+        <AdminDashboard {...defaultAdminProps} />
+      </AuthProvider>
+    );
+
+    const devicesTab = screen.getByRole('button', { name: /dispositivos & segurança/i });
+    fireEvent.click(devicesTab);
+
+    expect(screen.getByRole('button', { name: /alterar senha/i })).toBeInTheDocument();
   });
 });

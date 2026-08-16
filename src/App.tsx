@@ -97,6 +97,30 @@ export default function App() {
     localStorage.setItem('bg_themes', JSON.stringify(themes));
   }, [themes]);
 
+  useEffect(() => {
+    localStorage.setItem('bg_auctions', JSON.stringify(auctions));
+  }, [auctions]);
+
+  const getDeletedAuctionIds = (): string[] => {
+    try {
+      const saved = localStorage.getItem('bg_deleted_auction_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const markAuctionAsDeleted = (id: string) => {
+    try {
+      const current = getDeletedAuctionIds();
+      if (!current.includes(id)) {
+        localStorage.setItem('bg_deleted_auction_ids', JSON.stringify([...current, id]));
+      }
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+  };
+
   const handleAddCategory = (cat: string) => {
     if (!categories.includes(cat)) {
       setCategories(prev => [...prev, cat]);
@@ -124,12 +148,19 @@ export default function App() {
         fetchProducts(),
         fetchAuctions(),
       ]);
-      setProducts(prods.length > 0 ? prods : INITIAL_PRODUCTS);
-      setAuctions(aucs.length > 0 ? aucs : INITIAL_AUCTIONS);
+      setProducts(prods && prods.length > 0 ? prods : INITIAL_PRODUCTS);
+
+      const deletedIds = getDeletedAuctionIds();
+      if (Array.isArray(aucs)) {
+        setAuctions(aucs.filter(a => !deletedIds.includes(a.id)));
+      } else {
+        setAuctions(INITIAL_AUCTIONS.filter(a => !deletedIds.includes(a.id)));
+      }
     } catch {
-      // Graceful fallback: use static data so the store always works
+      // Graceful fallback on network failure
+      const deletedIds = getDeletedAuctionIds();
       setProducts(INITIAL_PRODUCTS);
-      setAuctions(INITIAL_AUCTIONS);
+      setAuctions(INITIAL_AUCTIONS.filter(a => !deletedIds.includes(a.id)));
     } finally {
       setLoading(false);
     }
@@ -143,7 +174,10 @@ export default function App() {
         fetchAuctions(),
       ]);
       if (prods && prods.length > 0) setProducts(prods);
-      if (aucs && aucs.length > 0) setAuctions(aucs);
+      if (Array.isArray(aucs)) {
+        const deletedIds = getDeletedAuctionIds();
+        setAuctions(aucs.filter(a => !deletedIds.includes(a.id)));
+      }
     } catch (err) {
       console.error('Silent refresh error:', err);
     }
@@ -350,6 +384,7 @@ export default function App() {
       const deletedAuc = prev.find(a => !next.some(n => n.id === a.id));
       setAuctions(next);
       if (deletedAuc) {
+        markAuctionAsDeleted(deletedAuc.id);
         try {
           await deleteAuction(deletedAuc.id);
         } catch (err) {

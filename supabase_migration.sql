@@ -135,6 +135,26 @@ SELECT * FROM (VALUES
 WHERE NOT EXISTS (SELECT 1 FROM products LIMIT 1);
 
 -- =============================================================================
+-- TABELA: admin_devices
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS admin_devices (
+  id TEXT PRIMARY KEY,
+  user_name TEXT NOT NULL,
+  device_name TEXT NOT NULL,
+  device_type TEXT DEFAULT 'desktop',
+  browser TEXT,
+  os TEXT,
+  last_active_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE admin_devices ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "admin_devices_all" ON admin_devices;
+CREATE POLICY "admin_devices_all" ON admin_devices
+  FOR ALL USING (auth.role() = 'authenticated');
+
+-- =============================================================================
 -- SEED: Leilões iniciais (só insere se a tabela estiver vazia)
 -- =============================================================================
 INSERT INTO auctions (id, title, description, image_url, current_bid, min_increment, ends_at, status, bids_count)

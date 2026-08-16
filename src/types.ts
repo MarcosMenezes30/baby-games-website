@@ -48,3 +48,15 @@ export interface OrderLog {
   timestamp: string;
   status: 'Pendente' | 'Concluído' | 'Cancelado';
 }
+
+export interface AdminDevice {
+  id: string;
+  userName: string;
+  deviceName: string;
+  deviceType: 'desktop' | 'mobile' | 'tablet';
+  browser: string;
+  os: string;
+  lastActiveAt: string;
+  createdAt: string;
+  isCurrent?: boolean;
+}
