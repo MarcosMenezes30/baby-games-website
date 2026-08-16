@@ -109,21 +109,47 @@ function ProductCard({ product, onAddToCart }: ProductCardProps) {
         {/* Stock badge */}
         <div className="absolute top-3 right-3 z-20">
           {isOutOfStock ? (
-            <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-bold"
-              style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold tracking-wider uppercase shadow-lg"
+              style={{
+                background: 'rgba(18, 6, 8, 0.95)',
+                border: '1px solid rgba(248, 113, 113, 0.7)',
+                color: '#fca5a5',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.7), 0 0 10px rgba(239,68,68,0.25)',
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
               Esgotado
             </span>
           ) : product.stock <= 2 ? (
             <motion.span
-              animate={{ opacity: [1, 0.6, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className="px-2 py-0.5 rounded-md text-[9px] font-mono font-bold"
-              style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)', color: '#FCD34D' }}>
+              animate={{ opacity: [1, 0.75, 1], scale: [1, 1.02, 1] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold tracking-wider uppercase shadow-lg"
+              style={{
+                background: 'rgba(26, 14, 2, 0.95)',
+                border: '1px solid rgba(245, 158, 11, 0.8)',
+                color: '#fde047',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.7), 0 0 12px rgba(245,158,11,0.35)',
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
               Só {product.stock} restam!
             </motion.span>
           ) : (
-            <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-bold"
-              style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#34d399' }}>
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold tracking-wider uppercase shadow-lg"
+              style={{
+                background: 'rgba(4, 24, 14, 0.95)',
+                border: '1px solid rgba(52, 211, 153, 0.7)',
+                color: '#6ee7b7',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.7), 0 0 10px rgba(16,185,129,0.25)',
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Em Estoque
             </span>
           )}
@@ -146,8 +172,8 @@ function ProductCard({ product, onAddToCart }: ProductCardProps) {
             <span className="section-label text-[9px] py-0.5 px-2" style={{ borderRadius: '6px' }}>
               {product.theme}
             </span>
-            <span className="text-[9px] font-mono px-2 py-0.5 rounded-md"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded-md font-bold"
+              style={{ background: 'rgba(10,10,22,0.92)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>
               {product.category}
             </span>
           </div>

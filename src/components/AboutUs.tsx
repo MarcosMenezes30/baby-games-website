@@ -417,36 +417,7 @@ export default function AboutUs({ auctions, showAboutOnly = false, showAuctionsO
             })()}
 
             {/* Auction cards */}
-            {auctions.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="text-center py-12 px-6 glass rounded-2xl space-y-4 max-w-xl mx-auto"
-                style={{ border: '1px dashed rgba(236,72,153,0.3)', background: 'rgba(17,17,40,0.7)' }}
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl mx-auto"
-                  style={{ background: 'rgba(236,72,153,0.1)', border: '1px solid rgba(236,72,153,0.3)' }}>
-                  <Gavel className="h-7 w-7 text-pink-400" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-display font-700 text-white text-lg">Nenhum leilão ativo no momento</h4>
-                  <p className="text-white/45 text-xs font-sans max-w-md mx-auto">
-                    Novos lotes e peças raras são anunciados diretamente no nosso grupo VIP do WhatsApp. Participe para não perder o próximo!
-                  </p>
-                </div>
-                <a
-                  href={`https://wa.me/${cleanPhone}?text=Quero%20entrar%20no%20grupo%20de%20leiloes`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 py-3 px-6 rounded-xl text-white font-display font-700 text-xs uppercase tracking-wider transition-all"
-                  style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 0 20px rgba(22,163,74,0.3)' }}
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Entrar no Grupo de Leilões
-                </a>
-              </motion.div>
-            ) : (
+            {auctions.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {auctions.map((auc, idx) => {
                   const isEnded = auc.status === 'ended';
@@ -463,104 +434,98 @@ export default function AboutUs({ auctions, showAboutOnly = false, showAuctionsO
                       style={{
                         background: 'rgba(17,17,40,0.9)',
                         border: isEnded ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(236,72,153,0.25)',
-                        boxShadow: isEnded ? 'none' : '0 0 20px rgba(236,72,153,0.06), 0 4px 20px rgba(0,0,0,0.4)',
-                        opacity: isEnded ? 0.7 : 1,
+                        boxShadow: isEnded ? 'none' : '0 4px 25px rgba(236,72,153,0.12)',
+                        opacity: isEnded ? 0.65 : 1,
                       }}
                     >
-                      {/* Animated border for active */}
-                      {!isEnded && (
-                        <motion.div
-                          className="absolute inset-0 rounded-2xl pointer-events-none"
-                          animate={{ boxShadow: ['0 0 10px rgba(236,72,153,0.1)', '0 0 25px rgba(236,72,153,0.25)', '0 0 10px rgba(236,72,153,0.1)'] }}
-                          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                      {/* Image container */}
+                      <div className="relative h-52 w-full overflow-hidden bg-black/40">
+                        <img
+                          src={auc.imageUrl}
+                          alt={auc.title}
+                          className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
                         />
-                      )}
-
-                      {/* Image */}
-                      <div className="relative aspect-video overflow-hidden">
-                        <img src={auc.imageUrl} alt={auc.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(17,17,40,1) 0%, transparent 60%)' }} />
-
-                        {/* Status badge */}
+                        {/* Status Badge */}
                         <div className="absolute top-3 left-3">
-                          {isEnded ? (
-                            <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold"
-                              style={{ background: 'rgba(75,85,99,0.8)', color: '#9CA3AF', backdropFilter: 'blur(4px)' }}>
-                              Finalizado
-                          </span>
-                        ) : (
-                          <motion.div
-                            animate={{ boxShadow: ['0 0 8px rgba(239,68,68,0.5)', '0 0 20px rgba(239,68,68,0.8)', '0 0 8px rgba(239,68,68,0.5)'] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-white text-[10px] font-orbitron font-bold"
-                            style={{ background: 'rgba(239,68,68,0.9)', backdropFilter: 'blur(4px)' }}
-                          >
-                            <motion.span
-                              animate={{ opacity: [1, 0.3, 1] }}
-                              transition={{ duration: 1.2, repeat: Infinity }}
-                              className="h-1.5 w-1.5 rounded-full bg-white"
-                            />
-                            LIVE
-                          </motion.div>
-                        )}
+                          {auc.status === 'active' && (
+                            <span className="badge-flame flex items-center gap-1 text-[11px]">
+                              <span className="h-1.5 w-1.5 rounded-full bg-pink-400 animate-ping inline-block" />
+                              <Flame className="h-3 w-3" /> Ao Vivo
+                            </span>
+                          )}
+                          {auc.status === 'upcoming' && (
+                            <span className="badge-purple flex items-center gap-1 text-[11px]">
+                              <Clock className="h-3 w-3" /> Em Breve
+                            </span>
+                          )}
+                          {auc.status === 'ended' && (
+                            <span className="badge-gray flex items-center gap-1 text-[11px]">
+                              Encerrado
+                            </span>
+                          )}
+                        </div>
+
+                        {/* End time pill */}
+                        <div className="absolute bottom-3 right-3 glass px-2.5 py-1 rounded-lg text-[11px] font-mono text-white/80 flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-pink-400" />
+                          {auc.endsAt}
+                        </div>
                       </div>
 
-                      {/* Date badge */}
-                      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono"
-                        style={{ background: 'rgba(5,5,16,0.85)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(8px)' }}>
-                        <Calendar className="h-3 w-3 text-violet-400" />
-                        {auc.endsAt}
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-4 flex-1 flex flex-col gap-3">
-                      <div>
-                        <h4 className="font-display font-700 text-white text-sm sm:text-base line-clamp-1 mb-1">{auc.title}</h4>
-                        <p className="text-xs text-white/35 line-clamp-2 font-sans">{auc.description}</p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 p-3 rounded-xl"
-                        style={{ background: 'rgba(5,5,16,0.8)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      {/* Card Content */}
+                      <div className="p-5 flex flex-col flex-1 gap-4">
                         <div>
-                          <div className="text-[9px] text-white/25 uppercase tracking-widest font-mono mb-1">Lance Atual</div>
-                          <div className="price-tag text-lg font-black" style={{ color: isEnded ? '#6B7280' : '#F59E0B', textShadow: isEnded ? 'none' : '0 0 15px rgba(245,158,11,0.4)' }}>
-                            R$ {auc.currentBid.toFixed(2)}
+                          <h4 className="font-display font-700 text-white text-base line-clamp-2 leading-snug">
+                            {auc.title}
+                          </h4>
+                          <p className="text-white/45 text-xs line-clamp-2 mt-1 font-sans">
+                            {auc.description}
+                          </p>
+                        </div>
+
+                        {/* Bid details */}
+                        <div className="flex items-center justify-between py-3 px-4 rounded-xl"
+                          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                        >
+                          <div>
+                            <div className="text-[9px] text-white/25 uppercase tracking-widest font-mono mb-1">Lance Atual</div>
+                            <div className="price-tag text-lg font-black" style={{ color: isEnded ? '#6B7280' : '#F59E0B', textShadow: isEnded ? 'none' : '0 0 15px rgba(245,158,11,0.4)' }}>
+                              R$ {auc.currentBid.toFixed(2)}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[9px] text-white/25 uppercase tracking-widest font-mono mb-1">Lances</div>
+                            <div className="text-sm font-bold text-white">{auc.bidsCount}</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-[9px] text-white/25 uppercase tracking-widest font-mono mb-1">Lances</div>
-                          <div className="text-sm font-bold text-white">{auc.bidsCount}</div>
-                        </div>
+
+                        {!isEnded ? (
+                          <a
+                            href={`https://wa.me/${cleanPhone}?text=Olá!%20Quero%20dar%20lance%20em%20${encodeURIComponent(auc.title)}`}
+                            target="_blank" rel="noreferrer"
+                            className="btn-primary flex items-center justify-center gap-2 py-3 text-xs rounded-xl"
+                            style={{ fontSize: '11px', padding: '12px 16px', borderRadius: '10px' }}
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            Dar Lance no WhatsApp
+                          </a>
+                        ) : (
+                          <div className="text-center text-xs text-white/25 font-mono italic py-2">
+                            Leilão encerrado · Peça arrematada!
+                          </div>
+                        )}
+
+                        {!isEnded && (
+                          <div className="text-[10px] text-white/25 font-mono text-center">
+                            * Incremento mínimo: R$ {auc.minIncrement.toFixed(2)}
+                          </div>
+                        )}
                       </div>
-
-                      {!isEnded ? (
-                        <a
-                          href={`https://wa.me/${cleanPhone}?text=Olá!%20Quero%20dar%20lance%20em%20${encodeURIComponent(auc.title)}`}
-                          target="_blank" rel="noreferrer"
-                          className="btn-primary flex items-center justify-center gap-2 py-3 text-xs rounded-xl"
-                          style={{ fontSize: '11px', padding: '12px 16px', borderRadius: '10px' }}
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          Dar Lance no WhatsApp
-                        </a>
-                      ) : (
-                        <div className="text-center text-xs text-white/25 font-mono italic py-2">
-                          Leilão encerrado · Peça arrematada!
-                        </div>
-                      )}
-
-                      {!isEnded && (
-                        <div className="text-[10px] text-white/25 font-mono text-center">
-                          * Incremento mínimo: R$ {auc.minIncrement.toFixed(2)}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
