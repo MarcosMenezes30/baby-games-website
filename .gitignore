@@ -44,3 +44,9 @@ coverage/
 
 # Other mac file
 .DS_Store
+
+# Internal AI/IDE metadata — não deve ser exposto
+metadata.json
+assets/.aistudio/
+assets/.aistudio
+.agents/
