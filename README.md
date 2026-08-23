@@ -312,7 +312,7 @@ Distribuído sob a licença MIT. Veja [LICENSE](./LICENSE) para mais informaçõ
 
 <div align="center">
 
-Feito com ❤️ por **Marcos Menezes**
+Feito por **Marcos Menezes**
 
 [![GitHub](https://img.shields.io/badge/GitHub-MarcosMenezes30-181717?style=for-the-badge&logo=github)](https://github.com/MarcosMenezes30)
 
